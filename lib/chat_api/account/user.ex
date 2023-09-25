@@ -7,8 +7,8 @@ defmodule ChatApi.Account.User do
   schema "users" do
     field(:email, :string)
     field(:user_name, :string)
-    field(:password, :string, virtual: true, redact: true)
-    field(:hashed_password, :string, redact: true)
+    field(:password, :string, virtual: true)
+    field(:hashed_password, :string)
     field(:confirmed_at, :naive_datetime)
 
     timestamps()
@@ -78,19 +78,27 @@ defmodule ChatApi.Account.User do
   end
 
   defp assign_user_name(changeset) do
-      # Get a default value for a username
-      user_name = case get_change(changeset, :user_name) do
-        name when is_binary(name) -> name
-        _ -> get_change(changeset, :email)
-      end
+    # Get a default value for a username
+    user_name = case get_change(changeset, :user_name) do
+      name when is_binary(name) -> name
+      _ -> get_change(changeset, :email)
+    end
 
-      changeset
-      |> put_change(:user_name, user_name)
+    changeset
+    |> put_change(:user_name, user_name)
+    |> validate_user_name()
+  end
+
+  defp validate_user_name(changeset) do
+    changeset
       |> validate_required([:user_name])
       # These are arbitrary - we may want to change them
       |> validate_length(:user_name, min: 3, max: 20)
   end
 
+  @doc """
+  Checks if the user's hashed password matches the password attempt when it is hashed.
+  """
   def valid_password?(%ChatApi.Account.User{hashed_password: hashed_password}, password)
     when is_binary(hashed_password) and byte_size(password) > 0
    do
@@ -100,5 +108,68 @@ defmodule ChatApi.Account.User do
   def valid_password(_, _) do
     Argon2.no_user_verify()
     false
+  end
+
+
+  @doc """
+  A user changeset for changing the email.
+
+  It requires the email to change otherwise an error is added.
+  """
+  def email_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:email])
+    |> validate_email()
+    |> case do
+      %{changes: %{email: _}} = changeset -> changeset
+      %{} = changeset -> add_error(changeset, :email, "did not change")
+    end
+  end
+
+  @doc """
+  A user changeset for changing the user_name.
+
+  It requires the user name to change otherwise an error is added.
+  """
+  def username_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:user_name])
+    |> validate_user_name()
+    |> case do
+      %{changes: %{user_name: _}} = changeset -> changeset
+      %{} = changeset -> add_error(changeset, :user_name, "did not change")
+    end
+  end
+
+  @doc """
+  Creates a password changeset that requires both password and password_confirmation values to be present
+  """
+  def password_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:password])
+    |> validate_confirmation(:password, message: "does not match password")
+    |> validate_password()
+  end
+
+  @doc """
+  Checks to see if the password is valid and
+  """
+  def validate_current_password(changeset, password) do
+    if valid_password?(changeset.data, password)  do
+      changeset
+    else
+      add_error(changeset, :current_password, "is not valid")
+    end
+  end
+
+  @doc """
+  Make sure that the new password does not match the old password.
+  """
+  def validate_new_password(changeset, new_password) do
+    if not valid_password?(changeset.data, new_password) do
+      changeset
+    else
+      add_error(changeset, :new_password, "did not change")
+    end
   end
 end
