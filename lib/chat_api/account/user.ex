@@ -38,7 +38,7 @@ defmodule ChatApi.Account.User do
 
   If a user name is not specified, the email is used as a default value.
 
-  TODO: Add doc tests
+  TODO: Add regular tests and doc tests
   """
   def registration_changeset(user, attrs) do
     user
@@ -53,7 +53,7 @@ defmodule ChatApi.Account.User do
     changeset
     |> validate_required([:email])
     |> validate_format(:email, @email_regex, message: "must be a valid email")
-    |> validate_length(:email, max: 160)
+    |> validate_length(:email, max: 160, message: "must be at most 160 characters long")
     |> unsafe_validate_unique(:email, ChatApi.Repo)
     |> unique_constraint(:email)
   end
@@ -65,7 +65,7 @@ defmodule ChatApi.Account.User do
     |> validate_format(:password, ~r/[a-z]/, message: "must contain a lowercase letter")
     |> validate_format(:password, ~r/[A-Z]/, message: "must contain an uppercase letter")
     |> validate_format(:password, ~r/[0-9]/, message: "must contain at least one number")
-    |> validate_format(:password, ~r"!@#$%^&*+`~']", message: "must contain at least one of the following characters: !@#$%^&*+`~'")
+    |> validate_format(:password, ~r"[!@#$%^&*+`~']", message: "must contain at least one of the following characters: !@#$%^&*+`~'")
     |> hash_password()
   end
 
