@@ -2,6 +2,14 @@ defmodule ChatApi.Account.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @type t :: %__MODULE__{
+          email: String.t(),
+          user_name: String.t(),
+          password: String.t() | nil,
+          hashed_password: binary() | nil,
+          confirmed_at: NaiveDateTime
+        }
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "users" do
@@ -13,7 +21,6 @@ defmodule ChatApi.Account.User do
 
     timestamps()
   end
-
 
   # TODO: Get types working
   # @type user :: Ecto.Changeset.t(
@@ -40,6 +47,7 @@ defmodule ChatApi.Account.User do
 
   TODO: Add regular tests and doc tests
   """
+  @spec registration_changeset(User.t(), [{String.t(), any()}]) :: Ecto.Changset.t()
   def registration_changeset(user, attrs) do
     user
     |> cast(attrs, [:email, :password])
@@ -65,7 +73,9 @@ defmodule ChatApi.Account.User do
     |> validate_format(:password, ~r/[a-z]/, message: "must contain a lowercase letter")
     |> validate_format(:password, ~r/[A-Z]/, message: "must contain an uppercase letter")
     |> validate_format(:password, ~r/[0-9]/, message: "must contain at least one number")
-    |> validate_format(:password, ~r"[!@#$%^&*+`~']", message: "must contain at least one of the following characters: !@#$%^&*+`~'")
+    |> validate_format(:password, ~r"[!@#$%^&*+`~']",
+      message: "must contain at least one of the following characters: !@#$%^&*+`~'"
+    )
     |> hash_password()
   end
 
@@ -79,10 +89,11 @@ defmodule ChatApi.Account.User do
 
   defp assign_user_name(changeset) do
     # Get a default value for a username
-    user_name = case get_change(changeset, :user_name) do
-      name when is_binary(name) -> name
-      _ -> get_change(changeset, :email)
-    end
+    user_name =
+      case get_change(changeset, :user_name) do
+        name when is_binary(name) -> name
+        _ -> get_change(changeset, :email)
+      end
 
     changeset
     |> put_change(:user_name, user_name)
@@ -91,17 +102,16 @@ defmodule ChatApi.Account.User do
 
   defp validate_user_name(changeset) do
     changeset
-      |> validate_required([:user_name])
-      # These are arbitrary - we may want to change them
-      |> validate_length(:user_name, min: 3, max: 20)
+    |> validate_required([:user_name])
+    # These are arbitrary - we may want to change them
+    |> validate_length(:user_name, min: 3, max: 20)
   end
 
   @doc """
   Checks if the user's hashed password matches the password attempt when it is hashed.
   """
   def valid_password?(%ChatApi.Account.User{hashed_password: hashed_password}, password)
-    when is_binary(hashed_password) and byte_size(password) > 0
-   do
+      when is_binary(hashed_password) and byte_size(password) > 0 do
     Argon2.verify_pass(password, hashed_password)
   end
 
@@ -109,7 +119,6 @@ defmodule ChatApi.Account.User do
     Argon2.no_user_verify()
     false
   end
-
 
   @doc """
   A user changeset for changing the email.
@@ -122,6 +131,16 @@ defmodule ChatApi.Account.User do
     |> validate_email()
     |> case do
       %{changes: %{email: _}} = changeset -> changeset
+      %{} = changeset -> add_error(changeset, :email, "did not change")
+    end
+  end
+
+  def user_name_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:user_name])
+    |> validate_user_name()
+    |> case do
+      %{changes: %{user_name: _}} = changeset -> changeset
       %{} = changeset -> add_error(changeset, :email, "did not change")
     end
   end
@@ -155,7 +174,7 @@ defmodule ChatApi.Account.User do
   Checks to see if the password is valid and
   """
   def validate_current_password(changeset, password) do
-    if valid_password?(changeset.data, password)  do
+    if valid_password?(changeset.data, password) do
       changeset
     else
       add_error(changeset, :current_password, "is not valid")

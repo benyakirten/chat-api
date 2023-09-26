@@ -3,7 +3,7 @@ defmodule ChatApiWeb.Router do
 
   pipeline :api do
     plug(:accepts, ["json"])
-    plug(ChatApiWeb.Plugs.Token, :auth)
+    plug(ChatApiWeb.Plugs.Token)
   end
 
   scope "/api", ChatApiWeb do

@@ -7,9 +7,8 @@ defmodule ChatApiWeb.Plugs.Token do
 
   def init(default), do: default
 
-  @spec call(Plug.Conn.t(), Token.token_type()) :: Plug.Conn.t()
-  def call(conn, required_context) do
-    token_result = conn |> get_token() |> Token.get_user_from_token(required_context)
+  def call(conn, _opts) do
+    token_result = conn |> get_token() |> Token.user_from_auth_token()
 
     case token_result do
       {:ok, user_id} -> assign(conn, :user_id, user_id)
@@ -21,8 +20,8 @@ defmodule ChatApiWeb.Plugs.Token do
   defp get_token(conn) do
     case get_req_header(conn, "authorization") do
       ["Bearer " <> token] -> {:ok, token}
-      absent when absent == [] -> {:error, :not_present}
-      _ -> {:error, :bad_shape}
+      absent when absent == [] -> {:error, :no_header}
+      _ -> {:error, :invalid}
     end
   end
 end
