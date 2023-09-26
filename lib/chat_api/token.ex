@@ -2,8 +2,7 @@ defmodule ChatApi.Token do
   @moduledoc """
   A module with helpers for generating various tokens.
   """
-  alias ChatApi.Repo
-  alias ChatApi.Account.{User, UserToken}
+  alias ChatApi.Account.UserToken
 
   @type token_type :: :auth | :refresh_token | :password_reset | :email_confirm | :email_change
 
@@ -30,29 +29,22 @@ defmodule ChatApi.Token do
   """
   @spec generate_token(Ecto.UUID.t(), atom()) :: {:ok, String.t()} | {:error, :not_found}
   def generate_token(user_id, context) do
-    if Repo.get_by(User, id: user_id) do
-      lifespan = get_lifespan_from_context(context)
+    lifespan = token_lifespan_for_context(context)
 
-      token =
-        Phoenix.Token.sign(
-          ChatApiWeb.Endpoint,
-          inspect(__MODULE__),
-          [id: user_id, context: context],
-          max_age: lifespan
-        )
-
-      {:ok, token}
-    else
-      {:error, :not_found}
-    end
+    Phoenix.Token.sign(
+      ChatApiWeb.Endpoint,
+      inspect(__MODULE__),
+      [id: user_id, context: context],
+      max_age: lifespan
+    )
   end
 
-  @spec get_lifespan_from_context(token_type) :: number()
-  defp get_lifespan_from_context(:auth), do: @auth_lifespan
-  defp get_lifespan_from_context(:refresh), do: @refresh_token_lifespan
-  defp get_lifespan_from_context(:password_reset), do: @password_reset_token_lifespan
-  defp get_lifespan_from_context(:email_confirm), do: @email_confirm_token_lifespan
-  defp get_lifespan_from_context(:email_change), do: @email_change_token_lifespan
+  @spec token_lifespan_for_context(token_type) :: number()
+  def token_lifespan_for_context(:auth), do: @auth_lifespan
+  def token_lifespan_for_context(:refresh), do: @refresh_token_lifespan
+  def token_lifespan_for_context(:password_reset), do: @password_reset_token_lifespan
+  def token_lifespan_for_context(:email_confirm), do: @email_confirm_token_lifespan
+  def token_lifespan_for_context(:email_change), do: @email_change_token_lifespan
 
   @doc """
   Check a token for validity and if it is, get the user ID from it.
