@@ -191,7 +191,7 @@ defmodule ChatApi.Account do
 
     hashed_token_changeset =
       %UserToken{}
-      |> UserToken.changeset(context: :refresh_token, token: hashed_token)
+      |> UserToken.changeset(context: "refresh_token", token: hashed_token)
       |> Changeset.put_assoc(:user, user)
 
     {auth_token, refresh_token, hashed_token_changeset}

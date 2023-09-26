@@ -125,7 +125,7 @@ defmodule ChatApi.Account.UserToken do
 
   This allows all tokens (or a specific token) for a user to be revoked
   """
-  @spec verify_hashed_token(String.t(), token_type()) :: Ecto.Query.t()
+  @spec verify_hashed_token(String.t(), token_type()) :: {:ok, User.t(), UserToken.t()} | {:error}
   def verify_hashed_token(token, context) do
     with decoded_token <- Base.url_decode64(token, padding: false),
          hashed_token <- :crypto.hash(@hash_algorithm, decoded_token),

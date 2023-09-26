@@ -2,6 +2,8 @@ defmodule ChatApi.Account.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias ChatApi.Account.{UserProfile, UserToken}
+
   @type t :: %__MODULE__{
           email: String.t(),
           user_name: String.t(),
@@ -19,20 +21,13 @@ defmodule ChatApi.Account.User do
     field(:hashed_password, :string)
     field(:confirmed_at, :naive_datetime)
 
+    has_many(:users_tokens, UserToken)
+    has_one(:user_profiles, UserProfile)
+
     timestamps()
   end
 
   # TODO: Get types working
-  # @type user :: Ecto.Changeset.t(
-  #   id: String.t(),
-  #   email: String.t(),
-  #   user_name: String.t(),
-  #   password: String.t(),
-  #   hashed_password: String.t(),
-  #   confirmed_at: NaiveDateTime.t() | nil,
-  #   inserted_at: NaiveDateTime.t(),
-  #   updated_at: NaiveDateTime.t(),
-  # )
 
   @doc """
   Register (or change a registration of) a user given
@@ -47,7 +42,6 @@ defmodule ChatApi.Account.User do
 
   TODO: Add regular tests and doc tests
   """
-  @spec registration_changeset(User.t(), [{String.t(), any()}]) :: Ecto.Changset.t()
   def registration_changeset(user, attrs) do
     user
     |> cast(attrs, [:email, :password])
