@@ -57,6 +57,11 @@ defmodule ChatApi.Account do
   def get_user_by_email!(email), do: Repo.get_by!(User, email: email)
 
   @doc """
+  TODO
+  """
+  def get_user_by_user_name!(user_name), do: Repo.get_by(User, user_name: user_name)
+
+  @doc """
   Creates a user.
 
   ## Examples
