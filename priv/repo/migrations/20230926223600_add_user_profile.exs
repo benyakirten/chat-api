@@ -13,11 +13,11 @@ defmodule ChatApi.Repo.Migrations.AddUserProfile do
 
     create table(:profile, primary_key: false) do
       add(:id, :binary_id, primary_key: true)
-      add(:online, :boolean)
-      add(:hidden, :boolean)
-      add(:theme, :string)
-      add(:magnification, :float)
-      add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all))
+      add(:online, :boolean, null: false, default: true)
+      add(:hidden, :boolean, null: false, default: false)
+      add(:theme, :string, null: false, default: "auto")
+      add(:magnification, :float, scale: 1, precision: 2, null: false, default: 1.0)
+      add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all), null: false)
 
       timestamps()
     end
