@@ -197,4 +197,16 @@ defmodule ChatApi.Account do
 
     {auth_token, refresh_token, hashed_token_changeset}
   end
+
+  def update_profile(profile, attrs) do
+    profile
+    |> UserProfile.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def update_profile_by_user_id(user_id, attrs) do
+    user_id
+    |> UserProfile.changeset_by_user_id(attrs)
+    |> Repo.update()
+  end
 end
