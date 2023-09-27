@@ -8,7 +8,7 @@ defmodule ChatApi.Account.UserProfile do
   @foreign_key_type :binary_id
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "user_profiles" do
-    field(:online, :boolean, default: true)
+    field(:online, :boolean, default: false)
     field(:hidden, :boolean, default: false)
     field(:theme, :string, default: "auto")
     field(:magnification, :decimal, default: 1.0)
@@ -27,7 +27,7 @@ defmodule ChatApi.Account.UserProfile do
   end
 
   def changeset_by_user_id(user_id, attrs) do
-    case Repo.one(from p in UserProfile, join: u in assoc(p, :user), where: u.id == ^user_id) do
+    case Repo.one(from p in UserProfile, where: p.user_id == ^user_id) do
       nil -> {:error, :not_found}
       profile -> changeset(profile, attrs)
     end

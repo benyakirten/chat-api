@@ -65,11 +65,24 @@ defmodule ChatApi.Account.UserToken do
 
   The authorization token itself cannot be revoked, but it only has a lifespan of 30 minutes.
   """
-  @spec verify_user_token_query(String.t(), String.t(), token_type()) :: Ecto.Query.t()
-  def verify_user_token_query(user_id, token, context) do
-    from(t in UserToken,
-      where: t.user_id == ^user_id and t.token == ^token and t.context == ^to_string(context)
-    )
+  @spec get_active_user_tokens_for_context(String.t(), token_type()) :: Ecto.Query.t()
+  def get_active_user_tokens_for_context(user_id, context) do
+    lifespan = token_lifespan_for_context(context)
+    from(t in UserToken, where: t.user_id == ^user_id and t.context == ^to_string(context) and t.inserted_at > ago(^lifespan, "day"))
+  end
+
+  def user_token_query(user_id, hashed_token) do
+    from(t in UserToken, where: t.user_id == ^user_id and t.token == ^hashed_token)
+  end
+
+  @spec hash_token(String.t()) :: {:ok, binary()} | {:error}
+  def hash_token(token) do
+    with {:ok, decoded_token} <- Base.url_decode64(token, padding: false),
+      hashed_token <- :crypto.hash(@hash_algorithm, decoded_token) do
+        {:ok, hashed_token}
+      else
+       _ -> {:error}
+      end
   end
 
   @doc """
@@ -77,7 +90,7 @@ defmodule ChatApi.Account.UserToken do
   password, changes their email or forces all devices to sign out
   then we want to be able to delete all the user's tokens.
   """
-  def user_tokens_query(
+  def user_tokens_by_context_query(
         user_id,
         contexts \\ [:refresh_token, :password_reset, :email_confirmation, :email_reset]
       ) do
@@ -129,8 +142,7 @@ defmodule ChatApi.Account.UserToken do
   """
   @spec verify_hashed_token(String.t(), token_type()) :: {:ok, User.t(), UserToken.t()} | {:error}
   def verify_hashed_token(token, context) do
-    with {:ok, decoded_token} <- Base.url_decode64(token, padding: false),
-         hashed_token <- :crypto.hash(@hash_algorithm, decoded_token),
+    with {:ok, hashed_token} <- hash_token(token),
          {user, retrieved_token} <-
            Repo.one(verify_hashed_token_query(hashed_token, context)) do
       {:ok, user, retrieved_token}

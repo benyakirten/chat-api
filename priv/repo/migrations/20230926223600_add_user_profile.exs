@@ -13,7 +13,7 @@ defmodule ChatApi.Repo.Migrations.AddUserProfile do
 
     create table(:user_profiles, primary_key: false) do
       add(:id, :binary_id, primary_key: true)
-      add(:online, :boolean, null: false, default: true)
+      add(:online, :boolean, null: false, default: false)
       add(:hidden, :boolean, null: false, default: false)
       add(:theme, :string, null: false, default: "auto")
       add(:magnification, :decimal, scale: 1, precision: 2, null: false, default: 1.0)

@@ -84,7 +84,8 @@ defmodule ChatApi.Account do
 
     deliver_user_confirmation_instructions(user)
 
-    {user, profile}
+    {:ok, auth_token, refresh_token} = attempt_login(attrs[:email], attrs[:password])
+    {user, profile, auth_token, refresh_token}
   end
 
   @doc """
@@ -120,7 +121,7 @@ defmodule ChatApi.Account do
   defp update_user_and_delete_tokens(changeset, user_id) do
     Ecto.Multi.new()
     |> Ecto.Multi.update(:user_update, changeset)
-    |> Ecto.Multi.delete_all(:delete_tokens, UserToken.user_tokens_query(user_id))
+    |> Ecto.Multi.delete_all(:delete_tokens, UserToken.user_tokens_by_context_query(user_id))
     |> Repo.transaction()
   end
 
@@ -142,7 +143,10 @@ defmodule ChatApi.Account do
 
     if User.valid_password?(user.hashed_password, password) do
       {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
-      Repo.insert(new_token_changeset)
+      Ecto.Multi.new()
+      |> Ecto.Multi.update(:set_online, UserProfile.changeset_by_user_id(user.id, %{online: true}))
+      |> Ecto.Multi.insert(:add_refresh_token, new_token_changeset)
+      |> Repo.transaction()
 
       {:ok, auth_token, refresh_token}
     else
@@ -155,27 +159,41 @@ defmodule ChatApi.Account do
   we can invalidate all refresh tokens for the user.
   """
   def sign_out_all(%User{} = user) do
-    user
-    |> UserToken.user_tokens_query([:refresh_token])
-    |> Repo.delete_all()
+    Ecto.Multi.new()
+    |> Ecto.Multi.delete_all(:delete_refresh_tokens, UserToken.user_tokens_by_context_query(user.id, [:refresh_token]))
+    |> Ecto.Multi.update(:set_user_offline, fn _ ->
+      UserProfile.changeset_by_user_id(user.id, %{online: false})
+    end)
+    |> Repo.transaction()
   end
 
-  # TODO: Do we need a signout function? Is this actually useful?
-  # How to detect if the user is still signed in on another device?
-  # Do we need to display if users are logged in?
-
   @doc """
-  Delete a refresh token from the table.
+  Removes a specified refresh token for the user and sets them to offline if they have no active refresh tokens
   """
-  def revoke_refresh_token(user_id, token) do
-    case Repo.one(UserToken.verify_user_token_query(user_id, token, :refresh_token)) do
-      nil -> {:error}
-      token -> Repo.delete(token)
+  def sign_out(user_id, token) do
+    # TODO: Can we make this into one query
+    refresh_tokens = Repo.all(UserToken.get_active_user_tokens_for_context(user_id, :refresh_token))
+
+    case length(refresh_tokens) do
+      0 -> {:error}
+      1 ->
+        [refresh_token] = refresh_tokens
+        Ecto.Multi.new()
+        |> Ecto.Multi.delete(:delete_token, refresh_token)
+        |> Ecto.Multi.update(:set_user_offline, fn %{delete_token: %{user_id: user_id}} ->
+          UserProfile.changeset_by_user_id(user_id, %{online: false})
+        end)
+        |> Repo.transaction()
+      _ ->
+       case UserToken.hash_token(token) do
+        {:ok, hashed_token} -> Repo.delete_all(UserToken.user_token_query(user_id, hashed_token))
+        _ -> {:error, :invalid_token}
+       end
     end
   end
 
-  @spec refresh_token(String.t()) :: {:ok, String.t(), binary()} | {:error, :invalid_token}
-  def refresh_token(token) do
+  @spec use_refresh_token(String.t()) :: {:ok, String.t(), binary()} | {:error, :invalid_token}
+  def use_refresh_token(token) do
     case UserToken.verify_hashed_token(token, :refresh_token) do
       {:ok, user, used_token} ->
         {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
