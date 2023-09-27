@@ -104,7 +104,7 @@ defmodule ChatApi.Account.User do
   @doc """
   Checks if the user's hashed password matches the password attempt when it is hashed.
   """
-  def valid_password?(%ChatApi.Account.User{hashed_password: hashed_password}, password)
+  def valid_password?(hashed_password, password)
       when is_binary(hashed_password) and byte_size(password) > 0 do
     Argon2.verify_pass(password, hashed_password)
   end
@@ -167,8 +167,8 @@ defmodule ChatApi.Account.User do
   @doc """
   Checks to see if the password is valid and
   """
-  def validate_current_password(changeset, password) do
-    if valid_password?(changeset.data, password) do
+  def validate_current_password(changeset, hashed_password, password) do
+    if valid_password?(hashed_password, password) do
       changeset
     else
       add_error(changeset, :current_password, "is not valid")
@@ -179,7 +179,7 @@ defmodule ChatApi.Account.User do
   Make sure that the new password does not match the old password.
   """
   def validate_new_password(changeset, new_password) do
-    if not valid_password?(changeset.data, new_password) do
+    if not valid_password?(changeset.data.hashed_password, new_password) do
       changeset
     else
       add_error(changeset, :new_password, "did not change")

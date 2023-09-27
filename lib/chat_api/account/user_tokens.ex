@@ -77,7 +77,7 @@ defmodule ChatApi.Account.UserToken do
   then we want to be able to delete all the user's tokens.
   """
   def user_tokens_query(
-        %User{id: user_id},
+        user_id,
         contexts \\ [:refresh_token, :password_reset, :email_confirmation, :email_reset]
       ) do
     string_contexts = Enum.map(contexts, &to_string(&1))

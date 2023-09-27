@@ -4,12 +4,8 @@ defmodule ChatApi.Account do
   TODO: Make sure everything fails spectacularly - error handler will take care of it
   """
 
-  import Ecto.Query, warn: false
-  alias ChatApi.Account.UserProfile
-  alias Ecto.{Multi, Changeset}
-  alias ChatApi.Repo
-  alias ChatApi.Account.{User, UserToken}
-  alias ChatApi.Token
+  alias ChatApi.{Repo, Token}
+  alias ChatApi.Account.{User, UserToken, UserProfile}
 
   @doc """
   Returns the list of users.
@@ -75,6 +71,7 @@ defmodule ChatApi.Account do
 
   """
   def create_user!(attrs \\ %{}) do
+    # Can we do this with one database transaction?
     {:ok, user} = %User{}
     |> User.registration_changeset(attrs)
     |> Repo.insert()
@@ -102,30 +99,26 @@ defmodule ChatApi.Account do
     changeset =
       user
       |> User.password_changeset(attrs)
-      |> User.validate_current_password(password)
+      |> User.validate_current_password(user.hashed_password, password)
       |> User.validate_new_password(attrs[:password])
 
     password_reset = Keyword.get(opts, :password_reset, false)
 
-    if password_reset, do: update_user_and_delete_tokens(changeset), else: Repo.update(changeset)
+    if password_reset, do: update_user_and_delete_tokens(changeset, user.id), else: Repo.update(changeset)
   end
 
   def update_user_email(user, password, attrs) do
     user
     |> User.email_changeset(attrs)
-    |> User.validate_current_password(password)
-    |> update_user_and_delete_tokens()
+    |> User.validate_current_password(user.hashed_password, password)
+    |> update_user_and_delete_tokens(user.id)
   end
 
-  defp update_user_and_delete_tokens(changeset) do
-    Multi.new()
-    |> Multi.update(:user_update, changeset)
-    |> Multi.delete_all(:delete_tokens, &UserToken.user_tokens_query(&1))
+  defp update_user_and_delete_tokens(changeset, user_id) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user_update, changeset)
+    |> Ecto.Multi.delete_all(:delete_tokens, UserToken.user_tokens_query(user_id))
     |> Repo.transaction()
-    |> case do
-      {:ok, %{user: user}} -> {:ok, user}
-      {:error, :user, changeset, _changes_so_far} -> {:error, changeset}
-    end
   end
 
   @doc """
@@ -144,8 +137,8 @@ defmodule ChatApi.Account do
   def attempt_login(email, password) when is_binary(email) and is_binary(password) do
     user = Repo.get_by(User, email: email)
 
-    if User.valid_password?(user, password) do
-      {auth_token, refresh_token, new_token_changeset} = create_new_tokens(user)
+    if User.valid_password?(user.hashed_password, password) do
+      {auth_token, refresh_token, new_token_changeset} = create_new_tokens(user, :refresh_token)
       Repo.insert(new_token_changeset)
 
       {:ok, auth_token, refresh_token}
@@ -171,7 +164,7 @@ defmodule ChatApi.Account do
   def revoke_refresh_token(%User{} = user, token) do
     %UserToken{}
     |> UserToken.changeset(%{token: token, context: "refresh_token"})
-    |> Changeset.put_assoc(user, :users)
+    |> Ecto.Changeset.put_assoc(user, :users)
     |> Repo.delete()
   end
 
@@ -179,13 +172,12 @@ defmodule ChatApi.Account do
   def refresh_token(token) do
     case UserToken.verify_hashed_token(token, :refresh_token) do
       {:ok, user, used_token} ->
-        IO.puts("HI!")
-        {auth_token, refresh_token, new_token_changeset} = create_new_tokens(user)
+        {auth_token, refresh_token, new_token_changeset} = create_new_tokens(user, :refresh_token)
         used_token_changeset = used_token |> UserToken.changeset()
 
         Ecto.Multi.new()
-        |> Multi.delete(:used_token, used_token_changeset)
-        |> Multi.insert(:new_token, new_token_changeset)
+        |> Ecto.Multi.delete(:used_token, used_token_changeset)
+        |> Ecto.Multi.insert(:new_token, new_token_changeset)
         |> Repo.transaction()
 
         {:ok, auth_token, refresh_token}
@@ -194,14 +186,14 @@ defmodule ChatApi.Account do
     end
   end
 
-  defp create_new_tokens(%User{} = user) do
+  defp create_new_tokens(%User{} = user, context) do
     auth_token = Token.generate_auth_token(user)
     {refresh_token, hashed_token} = UserToken.build_hashed_token()
 
     hashed_token_changeset =
       %UserToken{}
-      |> UserToken.changeset(%{context: "refresh_token", token: hashed_token})
-      |> Changeset.put_assoc(:user, user)
+      |> UserToken.changeset(%{context: to_string(context), token: hashed_token})
+      |> Ecto.Changeset.put_assoc(:user, user)
 
     {auth_token, refresh_token, hashed_token_changeset}
   end
