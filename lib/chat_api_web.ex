@@ -38,8 +38,7 @@ defmodule ChatApiWeb do
   def controller do
     quote do
       use Phoenix.Controller,
-        formats: [:html, :json],
-        layouts: [html: ChatApiWeb.Layouts]
+        formats: [:json]
 
       import Plug.Conn
       import ChatApiWeb.Gettext

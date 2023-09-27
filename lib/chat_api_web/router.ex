@@ -1,9 +1,20 @@
 defmodule ChatApiWeb.Router do
   use ChatApiWeb, :router
 
+  alias ChatApiWeb.{AuthController, ConversationController}
+
   pipeline :api do
     plug(:accepts, ["json"])
     plug(ChatApiWeb.Plugs.Token)
+  end
+
+  pipeline :auth do
+    plug(:accepts, ["json"])
+  end
+
+  scope "/auth", ChatApiWeb do
+    pipe_through(:auth)
+    post("/login", AuthController, :login)
   end
 
   scope "/api", ChatApiWeb do

@@ -28,7 +28,8 @@ defmodule ChatApiWeb.ConversationController do
   def update(conn, %{"id" => id, "conversation" => conversation_params}) do
     conversation = Chat.get_conversation!(id)
 
-    with {:ok, %Conversation{} = conversation} <- Chat.update_conversation(conversation, conversation_params) do
+    with {:ok, %Conversation{} = conversation} <-
+           Chat.update_conversation(conversation, conversation_params) do
       render(conn, :show, conversation: conversation)
     end
   end
