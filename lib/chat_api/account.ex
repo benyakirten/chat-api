@@ -5,6 +5,7 @@ defmodule ChatApi.Account do
   """
 
   import Ecto.Query, warn: false
+  alias ChatApi.Account.UserProfile
   alias Ecto.{Multi, Changeset}
   alias ChatApi.Repo
   alias ChatApi.Account.{User, UserToken}
@@ -73,10 +74,17 @@ defmodule ChatApi.Account do
       {:error, %Changeset{}}
 
   """
-  def create_user(attrs \\ %{}) do
-    %User{}
+  def create_user!(attrs \\ %{}) do
+    {:ok, user} = %User{}
     |> User.registration_changeset(attrs)
     |> Repo.insert()
+
+    {:ok, profile} = %UserProfile{}
+    |> UserProfile.changeset()
+    |> Ecto.Changeset.put_assoc(:user, user)
+    |> Repo.insert()
+
+    {user, profile}
   end
 
   @doc """
@@ -162,11 +170,12 @@ defmodule ChatApi.Account do
   """
   def revoke_refresh_token(%User{} = user, token) do
     %UserToken{}
-    |> UserToken.changeset(token: token, context: "refresh_token")
+    |> UserToken.changeset(%{token: token, context: "refresh_token"})
     |> Changeset.put_assoc(user, :users)
     |> Repo.delete()
   end
 
+  @spec refresh_token(String.t()) :: {:ok, String.t(), binary()} | {:error, :invalid_token}
   def refresh_token(token) do
     case UserToken.verify_hashed_token(token, :refresh_token) do
       {:ok, user, token} ->
@@ -180,8 +189,7 @@ defmodule ChatApi.Account do
 
         {:ok, auth_token, refresh_token}
 
-      {:error} ->
-        {:error, :invalid_token}
+      _ -> {:error, :invalid_token}
     end
   end
 
@@ -191,7 +199,7 @@ defmodule ChatApi.Account do
 
     hashed_token_changeset =
       %UserToken{}
-      |> UserToken.changeset(context: "refresh_token", token: hashed_token)
+      |> UserToken.changeset(%{context: "refresh_token", token: hashed_token})
       |> Changeset.put_assoc(:user, user)
 
     {auth_token, refresh_token, hashed_token_changeset}

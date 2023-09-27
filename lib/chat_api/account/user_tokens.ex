@@ -41,6 +41,7 @@ defmodule ChatApi.Account.UserToken do
   end
 
   @doc false
+  @spec changeset(UserProfile.t(), map()) :: UserProfile.t()
   def changeset(user_token, attrs \\ []) do
     user_token
     |> cast(attrs, [:token, :context])

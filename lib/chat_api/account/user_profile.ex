@@ -10,7 +10,7 @@ defmodule ChatApi.Account.UserProfile do
     field(:online, :boolean, default: true)
     field(:hidden, :boolean, default: false)
     field(:theme, :string, default: "auto")
-    field(:magnification, :float, default: 1.0)
+    field(:magnification, :decimal, default: 1.0)
 
     belongs_to(:user, User)
 
@@ -18,7 +18,7 @@ defmodule ChatApi.Account.UserProfile do
   end
 
   @doc false
-  def changeset(profile, attrs) do
+  def changeset(profile, attrs \\ %{}) do
     profile
     |> cast(attrs, [:online, :hidden, :theme, :magnification])
     |> validate_number(:magnification, min: 0.7, max: 1.4)
