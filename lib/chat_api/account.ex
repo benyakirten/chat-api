@@ -178,9 +178,10 @@ defmodule ChatApi.Account do
   @spec refresh_token(String.t()) :: {:ok, String.t(), binary()} | {:error, :invalid_token}
   def refresh_token(token) do
     case UserToken.verify_hashed_token(token, :refresh_token) do
-      {:ok, user, token} ->
+      {:ok, user, used_token} ->
+        IO.puts("HI!")
         {auth_token, refresh_token, new_token_changeset} = create_new_tokens(user)
-        used_token_changeset = token |> UserToken.changeset()
+        used_token_changeset = used_token |> UserToken.changeset()
 
         Ecto.Multi.new()
         |> Multi.delete(:used_token, used_token_changeset)

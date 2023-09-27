@@ -29,7 +29,7 @@ defmodule ChatApi.Account.UserToken do
   @email_confirm_token_lifespan_in_days 7
   @email_change_token_lifespan_in_days 7
 
-  @primary_key false
+  @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "users_tokens" do
     field(:token, :binary)
@@ -42,14 +42,14 @@ defmodule ChatApi.Account.UserToken do
 
   @doc false
   @spec changeset(UserProfile.t(), map()) :: UserProfile.t()
-  def changeset(user_token, attrs \\ []) do
+  def changeset(user_token, attrs \\ %{}) do
     user_token
     |> cast(attrs, [:token, :context])
     |> validate_required([:token, :context])
   end
 
   @spec token_lifespan_for_context(token_type) :: number()
-  defp token_lifespan_for_context(:refresh), do: @refresh_token_lifespan_in_days
+  defp token_lifespan_for_context(:refresh_token), do: @refresh_token_lifespan_in_days
   defp token_lifespan_for_context(:password_reset), do: @password_reset_token_lifespan_in_days
   defp token_lifespan_for_context(:email_confirmation), do: @email_confirm_token_lifespan_in_days
   defp token_lifespan_for_context(:email_change), do: @email_change_token_lifespan_in_days
@@ -128,11 +128,11 @@ defmodule ChatApi.Account.UserToken do
   """
   @spec verify_hashed_token(String.t(), token_type()) :: {:ok, User.t(), UserToken.t()} | {:error}
   def verify_hashed_token(token, context) do
-    with decoded_token <- Base.url_decode64(token, padding: false),
+    with {:ok, decoded_token} <- Base.url_decode64(token, padding: false),
          hashed_token <- :crypto.hash(@hash_algorithm, decoded_token),
-         {user, token} <-
+         {user, retrieved_token} <-
            Repo.one(verify_hashed_token_query(hashed_token, context)) do
-      {:ok, user, token}
+      {:ok, user, retrieved_token}
     else
       _ -> {:error}
     end
@@ -145,7 +145,7 @@ defmodule ChatApi.Account.UserToken do
       where:
         t.token == ^hashed_token and t.context == ^to_string(context) and
           t.inserted_at > ago(^lifespan, "day"),
-      join: u in assoc(t, :users),
+      join: u in assoc(t, :user),
       select: {u, t}
     )
   end
