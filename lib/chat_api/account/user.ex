@@ -185,4 +185,9 @@ defmodule ChatApi.Account.User do
       add_error(changeset, :new_password, "did not change")
     end
   end
+
+  def confirm_email_changeset(user) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    change(user, confirmed_at: now)
+  end
 end

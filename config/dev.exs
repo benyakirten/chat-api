@@ -64,3 +64,10 @@ config :phoenix, :plug_init_mode, :runtime
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# Set frontend URL for generating links
+config :chat_api, ChatApi.Account,
+  frontend_url: "http://localhost:4000"
+
+config :chat_api, ChatApi.Account.UserNotifier,
+  from_email: "example@example.com"

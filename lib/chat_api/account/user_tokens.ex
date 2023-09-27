@@ -41,11 +41,12 @@ defmodule ChatApi.Account.UserToken do
   end
 
   @doc false
-  @spec changeset(UserProfile.t(), map()) :: UserProfile.t()
-  def changeset(user_token, attrs \\ %{}) do
+  @spec changeset(UserProfile.t(), User.t(), map()) :: UserProfile.t()
+  def changeset(user_token, user, attrs \\ %{}) do
     user_token
     |> cast(attrs, [:token, :context])
     |> validate_required([:token, :context])
+    |> put_assoc(:user, user)
   end
 
   @spec token_lifespan_for_context(token_type) :: number()
@@ -64,10 +65,10 @@ defmodule ChatApi.Account.UserToken do
 
   The authorization token itself cannot be revoked, but it only has a lifespan of 30 minutes.
   """
-  @spec token_for_context_query(String.t(), token_type()) :: Ecto.Query.t()
-  def token_for_context_query(user_id, context) do
+  @spec verify_user_token_query(String.t(), String.t(), token_type()) :: Ecto.Query.t()
+  def verify_user_token_query(user_id, token, context) do
     from(t in UserToken,
-      where: t.user_id == ^user_id and t.context == ^to_string(context)
+      where: t.user_id == ^user_id and t.token == ^token and t.context == ^to_string(context)
     )
   end
 
@@ -148,5 +149,10 @@ defmodule ChatApi.Account.UserToken do
       join: u in assoc(t, :user),
       select: {u, t}
     )
+  end
+
+  @spec new_changeset_from_token_context(binary(), token_type(), User.t()) :: Ecto.Changeset.t()
+  def new_changeset_from_token_context(token, context, user) do
+    changeset(%UserToken{}, user, %{token: token, context: to_string(context)})
   end
 end

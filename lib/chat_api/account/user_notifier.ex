@@ -2,6 +2,9 @@ defmodule ChatApi.Account.UserNotifier do
   import Swoosh.Email
 
   alias ChatApi.Mailer
+  alias ChatApi.Account.User
+
+  @type limited_token_type :: :email_confirmation | :email_change | :password_reset
 
   @moduledoc """
   TODO: Write description
@@ -11,17 +14,23 @@ defmodule ChatApi.Account.UserNotifier do
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
+    from = Application.fetch_env!(:chat_api, ChatApi.Account.UserNotifier)[:from_email]
     email =
       new()
       |> to(recipient)
-      |> from({"TestApp", "contact@example.com"})
+      |> from({"Chat Api", from})
       |> subject(subject)
       |> text_body(body)
 
     with {:ok, _metadata} <- Mailer.deliver(email) do
-      {:ok, email}
+      {:ok}
     end
   end
+
+  @spec deliver_email(limited_token_type(), User, String.t()) :: {:ok}
+  def deliver_email(:email_coonfirmation, user, url), do: deliver_confirmation_instructions(user, url)
+  def deliver_email(:email_change, user, url), do: deliver_update_email_instructions(user, url)
+  def deliver_email(:password_reset, user, url), do: deliver_reset_password_instructions(user, url)
 
   @doc """
   Deliver instructions to confirm account.

@@ -5,7 +5,7 @@ defmodule ChatApi.Account do
   """
 
   alias ChatApi.{Repo, Token}
-  alias ChatApi.Account.{User, UserToken, UserProfile}
+  alias ChatApi.Account.{User, UserToken, UserProfile, UserNotifier}
 
   @doc """
   Returns the list of users.
@@ -36,7 +36,7 @@ defmodule ChatApi.Account do
       ** (Ecto.NoResultsError)
 
   """
-  def get_user!(id), do: Repo.get!(User, id)
+  def get_user(id), do: Repo.get(User, id)
 
   @doc """
   Get a single user by their email address.
@@ -51,12 +51,12 @@ defmodule ChatApi.Account do
       iex> get_user_by_email!("test")
       ** (Ecto.NoResultsError)
   """
-  def get_user_by_email!(email), do: Repo.get_by!(User, email: email)
+  def get_user_by_email(email), do: Repo.get_by(User, email: email)
 
   @doc """
   TODO
   """
-  def get_user_by_user_name!(user_name), do: Repo.get_by(User, user_name: user_name)
+  def get_user_by_user_name(user_name), do: Repo.get_by(User, user_name: user_name)
 
   @doc """
   Creates a user.
@@ -76,10 +76,13 @@ defmodule ChatApi.Account do
     |> User.registration_changeset(attrs)
     |> Repo.insert()
 
+    # TODO: Run this and the confirmation email simultaneously
     {:ok, profile} = %UserProfile{}
     |> UserProfile.changeset()
     |> Ecto.Changeset.put_assoc(:user, user)
     |> Repo.insert()
+
+    deliver_user_confirmation_instructions(user)
 
     {user, profile}
   end
@@ -138,7 +141,7 @@ defmodule ChatApi.Account do
     user = Repo.get_by(User, email: email)
 
     if User.valid_password?(user.hashed_password, password) do
-      {auth_token, refresh_token, new_token_changeset} = create_new_tokens(user, :refresh_token)
+      {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
       Repo.insert(new_token_changeset)
 
       {:ok, auth_token, refresh_token}
@@ -158,25 +161,27 @@ defmodule ChatApi.Account do
   end
 
   # TODO: Do we need a signout function? Is this actually useful?
+  # How to detect if the user is still signed in on another device?
+  # Do we need to display if users are logged in?
+
   @doc """
   Delete a refresh token from the table.
   """
-  def revoke_refresh_token(%User{} = user, token) do
-    %UserToken{}
-    |> UserToken.changeset(%{token: token, context: "refresh_token"})
-    |> Ecto.Changeset.put_assoc(user, :users)
-    |> Repo.delete()
+  def revoke_refresh_token(user_id, token) do
+    case Repo.one(UserToken.verify_user_token_query(user_id, token, :refresh_token)) do
+      nil -> {:error}
+      token -> Repo.delete(token)
+    end
   end
 
   @spec refresh_token(String.t()) :: {:ok, String.t(), binary()} | {:error, :invalid_token}
   def refresh_token(token) do
     case UserToken.verify_hashed_token(token, :refresh_token) do
       {:ok, user, used_token} ->
-        {auth_token, refresh_token, new_token_changeset} = create_new_tokens(user, :refresh_token)
-        used_token_changeset = used_token |> UserToken.changeset()
+        {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
 
         Ecto.Multi.new()
-        |> Ecto.Multi.delete(:used_token, used_token_changeset)
+        |> Ecto.Multi.delete(:used_token, used_token)
         |> Ecto.Multi.insert(:new_token, new_token_changeset)
         |> Repo.transaction()
 
@@ -186,14 +191,11 @@ defmodule ChatApi.Account do
     end
   end
 
-  defp create_new_tokens(%User{} = user, context) do
+  defp create_login_tokens(%User{} = user) do
     auth_token = Token.generate_auth_token(user)
     {refresh_token, hashed_token} = UserToken.build_hashed_token()
 
-    hashed_token_changeset =
-      %UserToken{}
-      |> UserToken.changeset(%{context: to_string(context), token: hashed_token})
-      |> Ecto.Changeset.put_assoc(:user, user)
+    hashed_token_changeset = UserToken.new_changeset_from_token_context(hashed_token, :refresh_token, user)
 
     {auth_token, refresh_token, hashed_token_changeset}
   end
@@ -208,5 +210,45 @@ defmodule ChatApi.Account do
     user_id
     |> UserProfile.changeset_by_user_id(attrs)
     |> Repo.update()
+  end
+
+  def confirm_user(token) do
+    case UserToken.verify_hashed_token(token, :email_confirmation) do
+      {:ok, user, _token} -> user |> User.confirm_email_changeset() |> Repo.update()
+      _ -> {:error}
+    end
+  end
+
+  def deliver_user_confirmation_instructions(%User{} = user) do
+    if user.confirmed_at do
+      {:error, :already_confirmed}
+    else
+      send_email_with_hashed_token(:email_confirmation, user)
+    end
+  end
+
+  def deliver_user_email_change_instructions(%User{} = user) do
+    send_email_with_hashed_token(:email_change, user)
+  end
+
+  def deliver_user_password_reset_instructions(%User{} = user) do
+    send_email_with_hashed_token(:password_reset, user)
+  end
+
+  @spec form_url(UserToken.token_type(), String.t()) :: String.t()
+  def form_url(context, token) do
+    frontend_url = Application.fetch_env!(:chat_api, ChatApi.Account)[:frontend_url]
+    "#{frontend_url}/#{to_string(context)}?token=#{token}"
+  end
+
+  @spec send_email_with_hashed_token(UserNotifier.limited_token_type(), User.t()) :: {:ok}
+  defp send_email_with_hashed_token(context, user) do
+    {confirm_token, hashed_token} = UserToken.build_hashed_token()
+
+    hashed_token_changeset = UserToken.new_changeset_from_token_context(hashed_token, context, user)
+    Repo.insert(hashed_token_changeset)
+
+    url = form_url(context, confirm_token)
+    UserNotifier.deliver_confirmation_instructions(user, url)
   end
 end
