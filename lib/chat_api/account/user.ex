@@ -3,6 +3,7 @@ defmodule ChatApi.Account.User do
   import Ecto.Changeset
 
   alias ChatApi.Account.{UserProfile, UserToken}
+  alias ChatApi.Chat.Conversation
 
   @type t :: %__MODULE__{
           email: String.t(),
@@ -23,6 +24,7 @@ defmodule ChatApi.Account.User do
 
     has_many(:users_tokens, UserToken)
     has_one(:user_profiles, UserProfile)
+    many_to_many(:conversations, Conversation, join_through: :users_conversations)
 
     timestamps()
   end

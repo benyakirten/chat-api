@@ -8,6 +8,7 @@ defmodule ChatApiWeb.Router do
 
   scope "/api", ChatApiWeb do
     pipe_through(:api)
+    resources "/conversations", ConversationController, except: [:new, :edit]
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
