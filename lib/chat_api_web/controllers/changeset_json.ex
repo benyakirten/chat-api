@@ -8,19 +8,19 @@ defmodule ChatApiWeb.ChangesetJSON do
     %{errors: Ecto.Changeset.traverse_errors(changeset, &translate_error/1)}
   end
 
-  def error(%{error: :expired}) do
+  def error(%{reason: :expired}) do
     %{errors: %{message: "Access Token Expired"}}
   end
 
-  def error(%{error: :invalid}) do
+  def error(%{reason: :invalid}) do
     %{errors: %{message: "Access Token Invalid"}}
   end
 
-  def error(%{error: :missing}) do
+  def error(%{reason: :missing}) do
     %{errors: %{message: "Access Token Missing"}}
   end
 
-  def error(%{error: :invalid_credentials}) do
+  def error(%{reason: :invalid_credentials}) do
     %{errors: %{message: "Invalid Email and/or Password"}}
   end
 

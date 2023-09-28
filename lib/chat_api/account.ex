@@ -70,22 +70,19 @@ defmodule ChatApi.Account do
       {:error, %Changeset{}}
 
   """
-  def create_user!(email, password) when is_binary(email) and is_binary(password) do
-    # Can we do this with one database transaction?
-    {:ok, user} = %User{}
-    |> User.registration_changeset(%{email: email, password: password})
-    |> Repo.insert()
-
-    # TODO: Run this and the confirmation email simultaneously
-    {:ok, profile} = %UserProfile{}
-    |> UserProfile.changeset()
-    |> Ecto.Changeset.put_assoc(:user, user)
-    |> Repo.insert()
-
-    deliver_user_confirmation_instructions(user)
-
-    {:ok, auth_token, refresh_token} = attempt_login(email, password)
-    {user, profile, auth_token, refresh_token}
+  def create_user(email, password) when is_binary(email) and is_binary(password) do
+    with {:ok, user} <- %User{} |> User.registration_changeset(%{email: email, password: password}) |> Repo.insert(),
+     {:ok, profile} <- %UserProfile{} |> UserProfile.changeset() |> Ecto.Changeset.put_assoc(:user, user) |> Repo.insert(),
+     {:ok, auth_token, refresh_token} <- attempt_login(user, password)
+    do
+      deliver_user_confirmation_instructions(user)
+      {:ok, user, profile, auth_token, refresh_token}
+    else
+      changeset_or_error -> case changeset_or_error do
+        {:error, reason} -> {:error, reason}
+        changeset -> {:error, changeset}
+      end
+    end
   end
 
   @doc """
@@ -134,15 +131,9 @@ defmodule ChatApi.Account do
     |> Repo.update()
   end
 
-  @doc """
-  Attempt to login by an email and password. If successful, create the auth and refresh token
-  and store the refresh token in the database.
-  """
-  @spec attempt_login(String.t(), String.t()) :: {:ok, String.t(), String.t()} | {:error, :invalid_credentials}
-  def attempt_login(email, password) when is_binary(email) and is_binary(password) do
-    user = Repo.get_by(User, email: email)
-
-    if user != nil and User.valid_password?(user.hashed_password, password) do
+  @spec attempt_login(User.t(), String.t()) :: {:ok, String.t(), String.t()} | {:error, :invalid_credentials}
+  defp attempt_login(%User{} = user, password) when is_binary(password) do
+    if User.valid_password?(user.hashed_password, password) do
       {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
       Ecto.Multi.new()
       |> Ecto.Multi.update(:set_online, UserProfile.changeset_by_user_id(user.id, %{online: true}))
@@ -152,6 +143,28 @@ defmodule ChatApi.Account do
       {:ok, auth_token, refresh_token}
     else
       {:error, :invalid_credentials}
+    end
+  end
+
+  @doc """
+  Attempt to login by an email and password. If successful, create the auth and refresh token
+  and store the refresh token in the database.
+  """
+  @spec login(String.t(), String.t()) :: {:ok, User.t(), UserProfile.t(), String.t(), String.t()} | {:error, :invalid_credentials}
+  def login(email, password) do
+    with user when not is_nil(user) <- Repo.get_by(User, email: email),
+      true <- User.valid_password?(user.hashed_password, password),
+      {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
+      profile when not is_nil(profile) <- Repo.get_by(UserProfile, user_id: user.id)
+    do
+      Ecto.Multi.new()
+      |> Ecto.Multi.update(:set_online, UserProfile.changeset_by_user_id(user.id, %{online: true}))
+      |> Ecto.Multi.insert(:add_refresh_token, new_token_changeset)
+      |> Repo.transaction()
+
+      {:ok, user, profile, auth_token, refresh_token}
+    else
+      _ -> {:error, :invalid_credentials}
     end
   end
 
