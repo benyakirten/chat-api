@@ -138,6 +138,7 @@ defmodule ChatApi.Account do
   Attempt to login by an email and password. If successful, create the auth and refresh token
   and store the refresh token in the database.
   """
+  @spec attempt_login(String.t(), String.t()) :: {:ok, String.t(), String.t()} | {:error, :invalid_credentials}
   def attempt_login(email, password) when is_binary(email) and is_binary(password) do
     user = Repo.get_by(User, email: email)
 
