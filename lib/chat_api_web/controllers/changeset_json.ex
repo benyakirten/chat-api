@@ -8,6 +8,22 @@ defmodule ChatApiWeb.ChangesetJSON do
     %{errors: Ecto.Changeset.traverse_errors(changeset, &translate_error/1)}
   end
 
+  def error(%{error: :expired}) do
+    %{errors: %{message: "Access Token Expired"}}
+  end
+
+  def error(%{error: :invalid}) do
+    %{errors: %{message: "Access Token Invalid"}}
+  end
+
+  def error(%{error: :missing}) do
+    %{errors: %{message: "Access Token Missing"}}
+  end
+
+  def error(%{error: :invalid_credentials}) do
+    %{errors: %{message: "Invalid Email and/or Password"}}
+  end
+
   defp translate_error({msg, opts}) do
     # You can make use of gettext to translate error messages by
     # uncommenting and adjusting the following code:

@@ -22,9 +22,17 @@ defmodule ChatApiWeb.FallbackController do
     |> render(:"404")
   end
 
-  def call(conn, opts) do
-    IO.inspect(opts)
+  def call(conn, {:error, :not_authorized}) do
     conn
-    |> render(:"500")
+    |> put_status(401)
+    |> put_view(json: ChatApiWeb.ChangesetJSON)
+    |> render(:"401")
+  end
+
+  def call(conn, {:error, :missing}) do
+    conn
+    |> put_status(401)
+    |> put_view(json: ChatApiWeb.ChangesetJSON)
+    |> render(:"400")
   end
 end

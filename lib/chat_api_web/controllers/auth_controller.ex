@@ -4,12 +4,12 @@ defmodule ChatApiWeb.AuthController do
   alias ChatApi.Account
   # alias ChatApi.Account.User
 
-  action_fallback ChatApiWeb.FallbackController
+  action_fallback ChatApiWeb.AuthFallbackController
 
   def login(conn, %{"email" => email, "password" => password}) do
-    {:ok, auth_token, refresh_token} =  Account.attempt_login(email, password)
-    # We also need to get the profile and the usere
-    render(conn, :login, [auth_token: auth_token, refresh_token: refresh_token])
+    with {:ok, auth_token, refresh_token} <-  Account.attempt_login(email, password) do
+      render(conn, :login, [auth_token: auth_token, refresh_token: refresh_token])
+    end
   end
 
   # def register(conn, attrs) do

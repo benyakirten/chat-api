@@ -142,7 +142,7 @@ defmodule ChatApi.Account do
   def attempt_login(email, password) when is_binary(email) and is_binary(password) do
     user = Repo.get_by(User, email: email)
 
-    if User.valid_password?(user.hashed_password, password) do
+    if user != nil and User.valid_password?(user.hashed_password, password) do
       {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
       Ecto.Multi.new()
       |> Ecto.Multi.update(:set_online, UserProfile.changeset_by_user_id(user.id, %{online: true}))
