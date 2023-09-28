@@ -70,10 +70,10 @@ defmodule ChatApi.Account do
       {:error, %Changeset{}}
 
   """
-  def create_user!(attrs \\ %{}) do
+  def create_user!(email, password) when is_binary(email) and is_binary(password) do
     # Can we do this with one database transaction?
     {:ok, user} = %User{}
-    |> User.registration_changeset(attrs)
+    |> User.registration_changeset(%{email: email, password: password})
     |> Repo.insert()
 
     # TODO: Run this and the confirmation email simultaneously
@@ -84,7 +84,7 @@ defmodule ChatApi.Account do
 
     deliver_user_confirmation_instructions(user)
 
-    {:ok, auth_token, refresh_token} = attempt_login(attrs[:email], attrs[:password])
+    {:ok, auth_token, refresh_token} = attempt_login(email, password)
     {user, profile, auth_token, refresh_token}
   end
 
@@ -267,6 +267,6 @@ defmodule ChatApi.Account do
     Repo.insert(hashed_token_changeset)
 
     url = form_url(context, confirm_token)
-    UserNotifier.deliver_confirmation_instructions(user, url)
+    UserNotifier.deliver_email(context, user, url)
   end
 end

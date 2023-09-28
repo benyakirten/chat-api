@@ -15,6 +15,11 @@ defmodule ChatApiWeb.Router do
   scope "/auth", ChatApiWeb do
     pipe_through(:auth)
     post("/login", AuthController, :login)
+    post("/signout", AuthController, :signout)
+    post("/register", AuthController, :register)
+    post("/signout", AuthController, :signout)
+    post("/confirm_email", AuthController, :confirm_email)
+    post("/reset_password", AuthController, :reset_password)
   end
 
   scope "/api", ChatApiWeb do

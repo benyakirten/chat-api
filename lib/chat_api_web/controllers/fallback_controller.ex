@@ -18,7 +18,13 @@ defmodule ChatApiWeb.FallbackController do
   def call(conn, {:error, :not_found}) do
     conn
     |> put_status(:not_found)
-    |> put_view(html: ChatApiWeb.ErrorHTML, json: ChatApiWeb.ErrorJSON)
+    |> put_view(json: ChatApiWeb.ErrorJSON)
     |> render(:"404")
+  end
+
+  def call(conn, opts) do
+    IO.inspect(opts)
+    conn
+    |> render(:"500")
   end
 end
