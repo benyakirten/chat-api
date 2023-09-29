@@ -14,6 +14,7 @@ defmodule ChatApiWeb.Plugs.Token do
 
   TODO: Add examples
   """
+  use ChatApiWeb, :controller
   import Plug.Conn
   alias ChatApi.Token
 
@@ -21,11 +22,16 @@ defmodule ChatApiWeb.Plugs.Token do
 
   def call(conn, _opts) do
     with {:ok, token} <- get_token(conn),
-     {:ok, user_id} <- Token.user_from_auth_token(token)
-    do
-      conn |> assign(:user_id, user_id)
+         {:ok, user_id} <- Token.user_from_auth_token(token) do
+      assign(conn, :user_id, user_id)
     else
-      {:error, reason} -> conn |> assign(:error, reason) |> halt()
+      {:error, reason} ->
+        conn
+        |> put_status(401)
+        |> put_view(json: ChatApiWeb.ErrorJSON)
+        |> assign(:error, "Authentication token is " <> to_string(reason) <> ".")
+        |> render(:"401")
+        |> halt()
     end
   end
 
@@ -33,7 +39,7 @@ defmodule ChatApiWeb.Plugs.Token do
     case get_req_header(conn, "authorization") do
       ["Bearer " <> token] -> {:ok, token}
       absent when absent == [] -> {:error, :missing}
-      _ -> {:error, :invalid}
+      _ -> {:error, :invalid_token}
     end
   end
 end
