@@ -6,15 +6,9 @@ defmodule ChatApiWeb.ProfileController do
 
   action_fallback ChatApiWeb.FallbackController
 
-  def change_password(conn, %{password: password, password_confirmation: password_confirmation}) do
-    conn
-  end
-
-  def update_username(conn, %{user_name: user_name}) do
-    conn
-  end
-
-  def update(conn, attrs) do
-    conn
+  def update_password(conn, opts) do
+    IO.inspect(conn)
+    IO.inspect(opts)
+    # render(conn, :update_password, [user_id: user_id])
   end
 end

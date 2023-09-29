@@ -3,7 +3,7 @@ defmodule ChatApiWeb.Router do
 
   pipeline :api do
     plug(:accepts, ["json"])
-    # plug(ChatApiWeb.Plugs.Token)
+    plug(ChatApiWeb.Plugs.Token)
   end
 
   pipeline :auth do
@@ -24,6 +24,9 @@ defmodule ChatApiWeb.Router do
 
   scope "/api", ChatApiWeb do
     pipe_through(:api)
+    get("/update_password", ProfileController, :update_password)
+    patch("/update_email", ProfileCotroller, :update_email)
+    patch("/update_profile", ProfileController, :update_profile)
     resources "/conversations", ConversationController, except: [:new, :edit]
   end
 

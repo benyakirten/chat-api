@@ -271,9 +271,9 @@ defmodule ChatApi.Account do
     end
   end
 
-  @spec confirm_password_reset_token(String.t()) :: {:ok, User.t()} | {:error, :invalid_token}
-  def confirm_password_reset_token(token) do
-    case UserToken.verify_hashed_token(token, :password_reset) do
+  @spec confirm_token(String.t(), UserToken.token_type()) :: {:ok, User.t()} | {:error, :invalid_token}
+  def confirm_token(token, context) do
+    case UserToken.verify_hashed_token(token, context) do
       {:ok, user, _token} -> {:ok, user}
       _ -> {:error, :invalid_token}
     end

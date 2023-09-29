@@ -2,7 +2,6 @@ defmodule ChatApiWeb.AuthController do
   use ChatApiWeb, :controller
 
   alias ChatApi.Account
-  # alias ChatApi.Account.User
 
   action_fallback ChatApiWeb.FallbackController
 
@@ -57,8 +56,8 @@ defmodule ChatApiWeb.AuthController do
   end
 
   def confirm_password_reset_token(conn, %{"token" => token}) do
-    with {:ok, user} <- Account.confirm_password_reset_token(token) do
-      render(conn, :confirm_password_reset_token, [user: user])
+    with {:ok, user} <- Account.confirm_token(token, :password_reset) do
+      render(conn, :confirm_token, [user: user])
     end
   end
 
@@ -70,7 +69,7 @@ defmodule ChatApiWeb.AuthController do
       "new_password" => new_password,
       "new_password_confirmation" => new_password_confirmation,
     }) do
-    with {:ok, user} <- Account.confirm_password_reset_token(token) do
+    with {:ok, user} <- Account.confirm_token(token, :password_reset) do
       case Account.update_user_password(
         user,
         password,
@@ -84,5 +83,21 @@ defmodule ChatApiWeb.AuthController do
     end
   end
 
-  # Changing password without reset/changing username/changing profile will have to be done with an auth token
+  # This should require authentication
+  def update_email(conn, %{"token" => token, "email" => email, "password" => password}) do
+    with {:ok, user} <- Account.confirm_token(token, :email_change) do
+      case Account.update_user_email(
+        user,
+        password,
+        %{email: email}
+      ) do
+        {:ok, _} -> send_204(conn)
+        {:error, _, %Ecto.Changeset{} = changeset, _} -> {:error, changeset}
+        error -> error
+      end
+    end
+  end
+
+  # Requesting an email change token will require the user to be authenticated
+  # Changing password without reset/changing username/changing email without a token/changing profile will have to be done with an auth token
 end
