@@ -8,12 +8,17 @@ defmodule ChatApiWeb.ChangesetJSON do
     %{errors: Ecto.Changeset.traverse_errors(changeset, &translate_error/1)}
   end
 
-  def error(%{reason: :expired}), do: %{errors: %{message: "Access Token Expired"}}
-  def error(%{reason: :invalid}), do: %{errors: %{message: "Access Token Invalid"}}
-  def error(%{reason: :missing}), do: %{errors: %{message: "Access Token Missing"}}
-  def error(%{reason: :invalid_credentials}), do: %{errors: %{message: "Invalid Email and/or Password"}}
-  def error(%{reason: :invalid_token}), do: %{errors: %{message: "Invalid Token"}}
-  def error(%{reason: :invalid_inputs}), do: %{errors: %{message: "Invalid Input"}}
+  # TODO: find a better place for these
+  def error(%{reason: :expired}), do: format_error("Access Token Expired")
+  def error(%{reason: :invalid}), do: format_error("Access Token Invalid")
+  def error(%{reason: :missing}), do: format_error("Access Token Missing")
+  def error(%{reason: :invalid_credentials}), do: format_error("Invalid Email and/or Password")
+  def error(%{reason: :invalid_token}), do: format_error("Invalid Token")
+  def error(%{reason: :invalid_inputs}), do: format_error("Invalid Input")
+
+  # Make the code a little more DRY
+  @spec format_error(String.t()) :: map()
+  defp format_error(err), do: %{error: %{message: err}}
 
   defp translate_error({msg, opts}) do
     # You can make use of gettext to translate error messages by

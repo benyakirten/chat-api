@@ -255,12 +255,30 @@ defmodule ChatApi.Account do
     |> Repo.update()
   end
 
+  @spec confirm_user(String.t()) :: {:ok, User.t()} | {:error, :invalid_token}
   def confirm_user(token) do
     case UserToken.verify_hashed_token(token, :email_confirmation) do
-      {:ok, user, _token} -> user |> User.confirm_email_changeset() |> Repo.update()
-      _ -> {:error}
+      {:ok, user, _token} ->
+        if user.confirmed_at do
+          {:error, :already_confirmed}
+        else
+          Ecto.Multi.new()
+          |> Ecto.Multi.update(:set_user_confirmed, User.confirm_email_changeset(user))
+          |> Ecto.Multi.delete_all(:delete_email_confirmation_tokens, UserToken.user_tokens_by_context_query(user.id, [:email_confirmation]))
+          |> Repo.transaction()
+        end
+      _ -> {:error, :invalid_token}
     end
   end
+
+  @spec confirm_password_reset_token(String.t()) :: {:ok, User.t()} | {:error, :invalid_token}
+  def confirm_password_reset_token(token) do
+    case UserToken.verify_hashed_token(token, :password_reset) do
+      {:ok, user, _token} -> {:ok, user}
+      _ -> {:error, :invalid_token}
+    end
+  end
+
 
   def deliver_user_confirmation_instructions(%User{} = user) do
     if user.confirmed_at do
@@ -287,6 +305,8 @@ defmodule ChatApi.Account do
   @spec send_email_with_hashed_token(UserNotifier.limited_token_type(), User.t()) :: {:ok}
   defp send_email_with_hashed_token(context, user) do
     {confirm_token, hashed_token} = UserToken.build_hashed_token()
+    IO.inspect(context)
+    IO.inspect(confirm_token)
 
     hashed_token_changeset = UserToken.new_changeset_from_token_context(hashed_token, context, user)
     Repo.insert(hashed_token_changeset)

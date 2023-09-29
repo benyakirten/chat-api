@@ -15,8 +15,11 @@ defmodule ChatApiWeb.Router do
     post("/login", AuthController, :login)
     post("/register", AuthController, :register)
     post("/signout", AuthController, :signout)
-    # post("/confirm_email", AuthController, :confirm_email)
-    # post("/reset_password", AuthController, :reset_password)
+    post("/confirm", AuthController, :confirm_user)
+    post("/request_new_confirmation", AuthController, :request_new_confirmation)
+    post("/request_password_reset_token", AuthController, :request_password_reset_token)
+    post("/confirm_password_reset_token", AuthController, :confirm_password_reset_token)
+    post("/reset_password", AuthController, :reset_password)
   end
 
   scope "/api", ChatApiWeb do

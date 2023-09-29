@@ -9,7 +9,7 @@ defmodule ChatApi.Account.User do
           user_name: String.t(),
           password: String.t() | nil,
           hashed_password: binary() | nil,
-          confirmed_at: NaiveDateTime
+          confirmed_at: NaiveDateTime | nil
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}

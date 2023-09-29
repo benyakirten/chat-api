@@ -34,13 +34,55 @@ defmodule ChatApiWeb.AuthController do
     |> send_resp(204, "")
   end
 
-  # def confirm_email(conn, %{token: token}) do
-  #   conn
-  # end
+  def confirm_user(conn, %{"token" => token}) do
+    with {:ok, _} <- Account.confirm_user(token) do
+      send_204(conn)
+    end
+  end
 
-  # def reset_password(conn, %{token: token, password: password, password_confirmation: password_confirmation}) do
-  #   conn
-  # end
+  def request_new_confirmation(conn, %{"email" => email}) do
+    with user when not is_nil(user) <- Account.get_user_by_email(email),
+      {:ok} <- Account.deliver_user_confirmation_instructions(user)
+    do
+      send_204(conn)
+    end
+  end
 
-  # Changing password without resetting/changing username/changing profile will have to be done with an auth token
+  def request_password_reset_token(conn, %{"email" => email}) do
+    with user when not is_nil(user) <- Account.get_user_by_email(email),
+      {:ok} <- Account.deliver_user_password_reset_instructions(user)
+    do
+      send_204(conn)
+    end
+  end
+
+  def confirm_password_reset_token(conn, %{"token" => token}) do
+    with {:ok, user} <- Account.confirm_password_reset_token(token) do
+      render(conn, :confirm_password_reset_token, [user: user])
+    end
+  end
+
+  def reset_password(
+    conn,
+    %{
+      "token" => token,
+      "password" => password,
+      "new_password" => new_password,
+      "new_password_confirmation" => new_password_confirmation,
+    }) do
+    with {:ok, user} <- Account.confirm_password_reset_token(token) do
+      case Account.update_user_password(
+        user,
+        password,
+        %{password: new_password, password_confirmation: new_password_confirmation},
+        [password_reset: true]
+      ) do
+        {:ok, _} -> send_204(conn)
+        {:error, _, %Ecto.Changeset{} = changeset, _} -> {:error, changeset}
+        error -> error
+      end
+    end
+  end
+
+  # Changing password without reset/changing username/changing profile will have to be done with an auth token
 end

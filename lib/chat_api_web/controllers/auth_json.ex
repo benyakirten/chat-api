@@ -8,15 +8,21 @@ defmodule ChatApiWeb.AuthJSON do
     ""
   end
 
-  # def confirm_email(conn, %{token: token}) do
-  #   conn
-  # end
+  def confirm_user(%{user: user}) do
+    %{success: true, confirmed_at: user.confirmed_at}
+  end
 
-  # def reset_password(conn, %{token: token, password: password, password_confirmation: password_confirmation}) do
-  #   conn
-  # end
+  def confirm_password_reset_token(%{user: user}) do
+    %{success: true, user: serialize_user(user)}
+  end
 
-  # Changing password without resetting/changing username/changing profile will have to be done with an auth token
+  defp serialize_user(%User{} = user) do
+    %{
+      id: user.id,
+      email: user.email,
+      user_name: user.user_name,
+    }
+  end
 
   defp serialize_user(%User{} = user, %UserProfile{} = profile) do
     %{

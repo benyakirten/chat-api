@@ -24,6 +24,8 @@ defmodule ChatApi.Account.UserNotifier do
 
     with {:ok, _metadata} <- Mailer.deliver(email) do
       {:ok}
+    else
+      error -> error
     end
   end
 
