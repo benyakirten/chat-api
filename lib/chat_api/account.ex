@@ -192,17 +192,25 @@ defmodule ChatApi.Account do
     do
       case length(refresh_tokens) do
         0 -> {:error, :invalid_token}
-        1 -> delete_last_refresh_token(refresh_tokens, hashed_token)
-        2 -> delete_one_refresh_token(refresh_tokens, user_id, hashed_token)
+        1 ->
+          [refresh_token] = refresh_tokens
+          if refresh_token.token == hashed_token do
+            delete_last_refresh_token(refresh_token)
+          else
+            {:error, :invalid_token}
+          end
+        2 ->
+          case Enum.find(refresh_tokens, :no_token, &(&1.token == hashed_token)) do
+            :no_token -> {:error, :invalid_token}
+            _ -> delete_one_refresh_token(user_id, hashed_token)
+          end
       end
     else
       _ -> {:error, :invalid_token}
     end
   end
 
-  defp delete_last_refresh_token(refresh_tokens, hashed_token) do
-    [refresh_token] = refresh_tokens
-    if refresh_token.token == hashed_token do
+  defp delete_last_refresh_token(refresh_token) do
       Ecto.Multi.new()
       |> Ecto.Multi.delete(:delete_token, refresh_token)
       |> Ecto.Multi.update(:set_user_offline, fn %{delete_token: %{user_id: user_id}} ->
@@ -211,18 +219,11 @@ defmodule ChatApi.Account do
       |> Repo.transaction()
 
       {:ok, :signed_out}
-    else
-      {:error, :invalid_token}
-    end
   end
 
-  defp delete_one_refresh_token(refresh_tokens, user_id, hashed_token) do
-    case Enum.find(refresh_tokens, :no_token, &(&1.token == hashed_token)) do
-      :no_token -> {:error, :invalid_token}
-      _ ->
-        Repo.delete_all(UserToken.user_token_query(user_id, hashed_token))
-        {:ok, :remaining_signins}
-    end
+  defp delete_one_refresh_token(user_id, hashed_token) do
+    Repo.delete_all(UserToken.user_token_query(user_id, hashed_token))
+    {:ok, :remaining_signins}
   end
 
   @spec use_refresh_token(String.t()) :: {:ok, String.t(), binary()} | {:error, :invalid_token}
