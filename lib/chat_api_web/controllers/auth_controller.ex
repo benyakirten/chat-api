@@ -12,9 +12,12 @@ defmodule ChatApiWeb.AuthController do
     end
   end
 
-  # def register(conn, attrs) do
-  #   conn
-  # end
+  def register(conn, %{"email" => email, "password" => password}) do
+    with {:ok, user, profile, auth_token, refresh_token} <-  Account.create_user(email, password) do
+      # Signing up and signing in will have the same response body
+      render(conn, :login, [user: user, profile: profile, auth_token: auth_token, refresh_token: refresh_token])
+    end
+  end
 
   # def signout(conn, %{refresh_token: refresh_token}) do
   #   conn
