@@ -33,7 +33,7 @@ defmodule ChatApiWeb.FallbackController do
     conn
     |> put_status(401)
     |> put_view(json: ChatApiWeb.ChangesetJSON)
-    |> render(:"400")
+    |> render(:"401")
   end
 
   def call(conn, {:error, :invalid_credentials}) do
@@ -43,10 +43,17 @@ defmodule ChatApiWeb.FallbackController do
     |> render(:error, reason: :invalid_credentials)
   end
 
-  def call(conn, error) do
-    IO.inspect(error)
+  def call(conn, {:error, :invalid_token}) do
     conn
-    |> put_status(418)
-    |> render(:error, error: "UH OH")
+    |> put_status(400)
+    |> put_view(json: ChatApiWeb.ChangesetJSON)
+    |> render(:error, reason: :invalid_token)
+  end
+
+  def call(conn, _opts) do
+    conn
+    |> put_status(400)
+    |> put_view(json: ChatApiWeb.ChangesetJSON)
+    |> render(:error, reason: :invalid_inputs)
   end
 end

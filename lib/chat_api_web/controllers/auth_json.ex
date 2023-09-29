@@ -4,13 +4,9 @@ defmodule ChatApiWeb.AuthJSON do
     %{user: serialize_user(user, profile), auth_token: auth_token, refresh_token: refresh_token}
   end
 
-  # def register(conn, attrs) do
-  #   conn
-  # end
-
-  # def signout(conn, %{refresh_token: refresh_token}) do
-  #   conn
-  # end
+  def signout(_opts) do
+    ""
+  end
 
   # def confirm_email(conn, %{token: token}) do
   #   conn

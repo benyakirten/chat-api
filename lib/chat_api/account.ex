@@ -184,25 +184,44 @@ defmodule ChatApi.Account do
   @doc """
   Removes a specified refresh token for the user and sets them to offline if they have no active refresh tokens
   """
+  @spec sign_out(String.t(), String.t()) :: {:ok, :signed_out | :remaining_signins} | {:error, :invalid_token}
   def sign_out(user_id, token) do
-    # TODO: Can we make this into one query
-    refresh_tokens = Repo.all(UserToken.get_active_user_tokens_for_context(user_id, :refresh_token))
+    # TODO: Can we make this into one query?
+    with {:ok, hashed_token} <- UserToken.hash_token(token),
+      refresh_tokens <- Repo.all(UserToken.get_active_user_tokens_for_context(user_id, :refresh_token))
+    do
+      case length(refresh_tokens) do
+        0 -> {:error, :invalid_token}
+        1 -> delete_last_refresh_token(refresh_tokens, hashed_token)
+        2 -> delete_one_refresh_token(refresh_tokens, user_id, hashed_token)
+      end
+    else
+      _ -> {:error, :invalid_token}
+    end
+  end
 
-    case length(refresh_tokens) do
-      0 -> {:error}
-      1 ->
-        [refresh_token] = refresh_tokens
-        Ecto.Multi.new()
-        |> Ecto.Multi.delete(:delete_token, refresh_token)
-        |> Ecto.Multi.update(:set_user_offline, fn %{delete_token: %{user_id: user_id}} ->
-          UserProfile.changeset_by_user_id(user_id, %{online: false})
-        end)
-        |> Repo.transaction()
+  defp delete_last_refresh_token(refresh_tokens, hashed_token) do
+    [refresh_token] = refresh_tokens
+    if refresh_token.token == hashed_token do
+      Ecto.Multi.new()
+      |> Ecto.Multi.delete(:delete_token, refresh_token)
+      |> Ecto.Multi.update(:set_user_offline, fn %{delete_token: %{user_id: user_id}} ->
+        UserProfile.changeset_by_user_id(user_id, %{online: false})
+      end)
+      |> Repo.transaction()
+
+      {:ok, :signed_out}
+    else
+      {:error, :invalid_token}
+    end
+  end
+
+  defp delete_one_refresh_token(refresh_tokens, user_id, hashed_token) do
+    case Enum.find(refresh_tokens, :no_token, &(&1.token == hashed_token)) do
+      :no_token -> {:error, :invalid_token}
       _ ->
-       case UserToken.hash_token(token) do
-        {:ok, hashed_token} -> Repo.delete_all(UserToken.user_token_query(user_id, hashed_token))
-        _ -> {:error, :invalid_token}
-       end
+        Repo.delete_all(UserToken.user_token_query(user_id, hashed_token))
+        {:ok, :remaining_signins}
     end
   end
 

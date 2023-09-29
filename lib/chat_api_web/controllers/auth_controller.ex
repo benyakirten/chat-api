@@ -19,9 +19,21 @@ defmodule ChatApiWeb.AuthController do
     end
   end
 
-  # def signout(conn, %{refresh_token: refresh_token}) do
-  #   conn
-  # end
+  def signout(conn, %{"user_id" => user_id, "refresh_token" => refresh_token}) do
+    res = Account.sign_out(user_id, refresh_token) |> IO.inspect()
+    case res do
+      {:ok, :signed_out} -> send_204(conn) # TODO: Transmit via socket that user has logged out
+      {:ok, :remaining_signins} -> send_204(conn)
+      error -> error
+    end
+  end
+
+  defp send_204(conn) do
+    conn
+    |> put_status(:no_content)
+    |> put_resp_header("content-type", "application/json")
+    |> send_resp(204, "")
+  end
 
   # def confirm_email(conn, %{token: token}) do
   #   conn
