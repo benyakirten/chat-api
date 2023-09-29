@@ -71,17 +71,20 @@ defmodule ChatApi.Account do
 
   """
   def create_user(email, password) when is_binary(email) and is_binary(password) do
+    # TODO: Reduce this to 1 database transaction
     with {:ok, user} <- %User{} |> User.registration_changeset(%{email: email, password: password}) |> Repo.insert(),
      {:ok, profile} <- %UserProfile{} |> UserProfile.changeset() |> Ecto.Changeset.put_assoc(:user, user) |> Repo.insert(),
-     {:ok, auth_token, refresh_token} <- attempt_login(user, password)
+     {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
+     {:ok, _} <- set_user_online(user, new_token_changeset)
     do
       deliver_user_confirmation_instructions(user)
       {:ok, user, profile, auth_token, refresh_token}
     else
-      changeset_or_error -> case changeset_or_error do
-        {:error, reason} -> {:error, reason}
-        changeset -> {:error, changeset}
-      end
+      changeset_or_error ->
+        case changeset_or_error do
+          {:error, reason} -> {:error, reason}
+          changeset -> {:error, changeset}
+        end
     end
   end
 
@@ -131,19 +134,11 @@ defmodule ChatApi.Account do
     |> Repo.update()
   end
 
-  @spec attempt_login(User.t(), String.t()) :: {:ok, String.t(), String.t()} | {:error, :invalid_credentials}
-  defp attempt_login(%User{} = user, password) when is_binary(password) do
-    if User.valid_password?(user.hashed_password, password) do
-      {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
-      Ecto.Multi.new()
-      |> Ecto.Multi.update(:set_online, UserProfile.changeset_by_user_id(user.id, %{online: true}))
-      |> Ecto.Multi.insert(:add_refresh_token, new_token_changeset)
-      |> Repo.transaction()
-
-      {:ok, auth_token, refresh_token}
-    else
-      {:error, :invalid_credentials}
-    end
+  defp set_user_online(%User{id: user_id}, new_token_changeset) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:set_online, UserProfile.changeset_by_user_id(user_id, %{online: true}))
+    |> Ecto.Multi.insert(:add_refresh_token, new_token_changeset)
+    |> Repo.transaction()
   end
 
   @doc """
@@ -154,14 +149,10 @@ defmodule ChatApi.Account do
   def login(email, password) do
     with user when not is_nil(user) <- Repo.get_by(User, email: email),
       true <- User.valid_password?(user.hashed_password, password),
+      profile when not is_nil(profile) <- Repo.get_by(UserProfile, user_id: user.id),
       {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
-      profile when not is_nil(profile) <- Repo.get_by(UserProfile, user_id: user.id)
+      {:ok, _} = set_user_online(user, new_token_changeset)
     do
-      Ecto.Multi.new()
-      |> Ecto.Multi.update(:set_online, UserProfile.changeset_by_user_id(user.id, %{online: true}))
-      |> Ecto.Multi.insert(:add_refresh_token, new_token_changeset)
-      |> Repo.transaction()
-
       {:ok, user, profile, auth_token, refresh_token}
     else
       _ -> {:error, :invalid_credentials}

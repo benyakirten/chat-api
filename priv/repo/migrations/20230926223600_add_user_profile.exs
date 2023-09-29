@@ -11,8 +11,7 @@ defmodule ChatApi.Repo.Migrations.AddUserProfile do
     create(index(:block_list, [:blocked_id]))
     create(unique_index(:block_list, [:blocker_id, :blocked_id]))
 
-    create table(:user_profiles, primary_key: false) do
-      add(:id, :binary_id, primary_key: true)
+    create table(:user_profiles) do
       add(:online, :boolean, null: false, default: false)
       add(:hidden, :boolean, null: false, default: false)
       add(:theme, :string, null: false, default: "auto")

@@ -8,8 +8,11 @@
 import Config
 
 config :chat_api,
-  ecto_repos: [ChatApi.Repo],
-  generators: [binary_id: true]
+  ecto_repos: [ChatApi.Repo]
+
+config :chat_api, ChatApi.Repo,
+  migration_primary_key: [type: :binary_id],
+  migration_timestamps: [type: :utc_datetime]
 
 # Configures the endpoint
 config :chat_api, ChatApiWeb.Endpoint,
