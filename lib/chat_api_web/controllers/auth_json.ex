@@ -1,11 +1,16 @@
 defmodule ChatApiWeb.AuthJSON do
   alias ChatApi.Account.{User, UserProfile}
+
   def login(%{user: user, profile: profile, auth_token: auth_token, refresh_token: refresh_token}) do
     %{user: serialize_user(user, profile), auth_token: auth_token, refresh_token: refresh_token}
   end
 
   def signout(_opts) do
     ""
+  end
+
+  def refresh_auth(%{refresh_token: refresh_token, auth_token: auth_token}) do
+    %{refresh_token: refresh_token, auth_token: auth_token}
   end
 
   def confirm_user(%{user: user}) do
@@ -20,7 +25,7 @@ defmodule ChatApiWeb.AuthJSON do
     %{
       id: user.id,
       email: user.email,
-      user_name: user.user_name,
+      user_name: user.user_name
     }
   end
 
