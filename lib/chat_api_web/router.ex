@@ -25,9 +25,9 @@ defmodule ChatApiWeb.Router do
 
   scope "/api", ChatApiWeb do
     pipe_through(:api)
-    get("/update_password", ProfileController, :update_password)
-    patch("/update_email", ProfileController, :update_email)
-    patch("/update_profile", ProfileController, :update_profile)
+    patch("/password", ProfileController, :update_password)
+    patch("/email", ProfileController, :update_email)
+    patch("/profile", ProfileController, :update_profile)
     resources "/conversations", ConversationController, except: [:new, :edit]
   end
 

@@ -7,12 +7,15 @@ defmodule ChatApiWeb.ProfileController do
 
   action_fallback ChatApiWeb.FallbackController
 
-  def update_password(%Plug.Conn{assigns: %{user_id: user_id}} = conn, %{
-        "password" => password,
-        "new_password" => new_password,
-        "new_password_confirmation" => new_password_confirmation
-      }) do
-    with {:ok, user} <- Account.get_user(user_id) do
+  def update_password(
+        %Plug.Conn{assigns: %{user_id: user_id}} = conn,
+        %{
+          "password" => password,
+          "new_password" => new_password,
+          "new_password_confirmation" => new_password_confirmation
+        }
+      ) do
+    with user when not is_nil(user) <- Account.get_user(user_id) do
       case Account.update_user_password(
              user,
              password,

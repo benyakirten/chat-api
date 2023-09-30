@@ -47,8 +47,6 @@ defmodule ChatApiWeb.AuthController do
   def refresh_auth(conn, %{"token" => token}) do
     with {:ok, auth_token, refresh_token} <-
            Account.use_refresh_token(token) do
-      IO.inspect(auth_token)
-      IO.inspect(refresh_token)
       render(conn, :refresh_auth, auth_token: auth_token, refresh_token: refresh_token)
     end
   end

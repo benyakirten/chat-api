@@ -72,11 +72,17 @@ defmodule ChatApi.Account do
   """
   def create_user(email, password) when is_binary(email) and is_binary(password) do
     # TODO: Reduce this to 1 database transaction
-    with {:ok, user} <- %User{} |> User.registration_changeset(%{email: email, password: password}) |> Repo.insert(),
-     {:ok, profile} <- %UserProfile{} |> UserProfile.changeset() |> Ecto.Changeset.put_assoc(:user, user) |> Repo.insert(),
-     {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
-     {:ok, _} <- set_user_online(user, new_token_changeset)
-    do
+    with {:ok, user} <-
+           %User{}
+           |> User.registration_changeset(%{email: email, password: password})
+           |> Repo.insert(),
+         {:ok, profile} <-
+           %UserProfile{}
+           |> UserProfile.changeset()
+           |> Ecto.Changeset.put_assoc(:user, user)
+           |> Repo.insert(),
+         {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
+         {:ok, _} <- set_user_online(user, new_token_changeset) do
       deliver_user_confirmation_instructions(user)
       {:ok, user, profile, auth_token, refresh_token}
     else
@@ -108,7 +114,9 @@ defmodule ChatApi.Account do
 
     password_reset = Keyword.get(opts, :password_reset, false)
 
-    if password_reset, do: update_user_and_delete_tokens(changeset, user.id), else: Repo.update(changeset)
+    if password_reset,
+      do: update_user_and_delete_tokens(changeset, user.id),
+      else: Repo.update(changeset)
   end
 
   def update_user_email(user, password, attrs) do
@@ -145,14 +153,15 @@ defmodule ChatApi.Account do
   Attempt to login by an email and password. If successful, create the auth and refresh token
   and store the refresh token in the database.
   """
-  @spec login(String.t(), String.t()) :: {:ok, User.t(), UserProfile.t(), String.t(), String.t()} | {:error, :invalid_credentials}
+  @spec login(String.t(), String.t()) ::
+          {:ok, User.t(), UserProfile.t(), String.t(), String.t()}
+          | {:error, :invalid_credentials}
   def login(email, password) do
     with user when not is_nil(user) <- Repo.get_by(User, email: email),
-      true <- User.valid_password?(user.hashed_password, password),
-      profile when not is_nil(profile) <- Repo.get_by(UserProfile, user_id: user.id),
-      {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
-      {:ok, _} = set_user_online(user, new_token_changeset)
-    do
+         true <- User.valid_password?(user.hashed_password, password),
+         profile when not is_nil(profile) <- Repo.get_by(UserProfile, user_id: user.id),
+         {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
+         {:ok, _} = set_user_online(user, new_token_changeset) do
       {:ok, user, profile, auth_token, refresh_token}
     else
       _ -> {:error, :invalid_credentials}
@@ -165,7 +174,10 @@ defmodule ChatApi.Account do
   """
   def sign_out_all(%User{} = user) do
     Ecto.Multi.new()
-    |> Ecto.Multi.delete_all(:delete_refresh_tokens, UserToken.user_tokens_by_context_query(user.id, [:refresh_token]))
+    |> Ecto.Multi.delete_all(
+      :delete_refresh_tokens,
+      UserToken.user_tokens_by_context_query(user.id, [:refresh_token])
+    )
     |> Ecto.Multi.update(:set_user_offline, fn _ ->
       UserProfile.changeset_by_user_id(user.id, %{online: false})
     end)
@@ -175,21 +187,26 @@ defmodule ChatApi.Account do
   @doc """
   Removes a specified refresh token for the user and sets them to offline if they have no active refresh tokens
   """
-  @spec sign_out(String.t(), String.t()) :: {:ok, :signed_out | :remaining_signins} | {:error, :invalid_token}
+  @spec sign_out(String.t(), String.t()) ::
+          {:ok, :signed_out | :remaining_signins} | {:error, :invalid_token}
   def sign_out(user_id, token) do
     # TODO: Can we make this into one query?
     with {:ok, hashed_token} <- UserToken.hash_token(token),
-      refresh_tokens <- Repo.all(UserToken.get_active_user_tokens_for_context(user_id, :refresh_token))
-    do
+         refresh_tokens <-
+           Repo.all(UserToken.get_active_user_tokens_for_context(user_id, :refresh_token)) do
       case length(refresh_tokens) do
-        0 -> {:error, :invalid_token}
+        0 ->
+          {:error, :invalid_token}
+
         1 ->
           [refresh_token] = refresh_tokens
+
           if refresh_token.token == hashed_token do
             delete_last_refresh_token(refresh_token)
           else
             {:error, :invalid_token}
           end
+
         2 ->
           case Enum.find(refresh_tokens, :no_token, &(&1.token == hashed_token)) do
             :no_token -> {:error, :invalid_token}
@@ -202,14 +219,14 @@ defmodule ChatApi.Account do
   end
 
   defp delete_last_refresh_token(refresh_token) do
-      Ecto.Multi.new()
-      |> Ecto.Multi.delete(:delete_token, refresh_token)
-      |> Ecto.Multi.update(:set_user_offline, fn %{delete_token: %{user_id: user_id}} ->
-        UserProfile.changeset_by_user_id(user_id, %{online: false})
-      end)
-      |> Repo.transaction()
+    Ecto.Multi.new()
+    |> Ecto.Multi.delete(:delete_token, refresh_token)
+    |> Ecto.Multi.update(:set_user_offline, fn %{delete_token: %{user_id: user_id}} ->
+      UserProfile.changeset_by_user_id(user_id, %{online: false})
+    end)
+    |> Repo.transaction()
 
-      {:ok, :signed_out}
+    {:ok, :signed_out}
   end
 
   defp delete_one_refresh_token(user_id, hashed_token) do
@@ -230,7 +247,8 @@ defmodule ChatApi.Account do
 
         {:ok, auth_token, refresh_token}
 
-      _ -> {:error, :invalid_token}
+      _ ->
+        {:error, :invalid_token}
     end
   end
 
@@ -238,7 +256,8 @@ defmodule ChatApi.Account do
     auth_token = Token.generate_auth_token(user)
     {refresh_token, hashed_token} = UserToken.build_hashed_token()
 
-    hashed_token_changeset = UserToken.new_changeset_from_token_context(hashed_token, :refresh_token, user)
+    hashed_token_changeset =
+      UserToken.new_changeset_from_token_context(hashed_token, :refresh_token, user)
 
     {auth_token, refresh_token, hashed_token_changeset}
   end
@@ -264,21 +283,26 @@ defmodule ChatApi.Account do
         else
           Ecto.Multi.new()
           |> Ecto.Multi.update(:set_user_confirmed, User.confirm_email_changeset(user))
-          |> Ecto.Multi.delete_all(:delete_email_confirmation_tokens, UserToken.user_tokens_by_context_query(user.id, [:email_confirmation]))
+          |> Ecto.Multi.delete_all(
+            :delete_email_confirmation_tokens,
+            UserToken.user_tokens_by_context_query(user.id, [:email_confirmation])
+          )
           |> Repo.transaction()
         end
-      _ -> {:error, :invalid_token}
+
+      _ ->
+        {:error, :invalid_token}
     end
   end
 
-  @spec confirm_token(String.t(), UserToken.token_type()) :: {:ok, User.t()} | {:error, :invalid_token}
+  @spec confirm_token(String.t(), UserToken.token_type()) ::
+          {:ok, User.t()} | {:error, :invalid_token}
   def confirm_token(token, context) do
     case UserToken.verify_hashed_token(token, context) do
       {:ok, user, _token} -> {:ok, user}
       _ -> {:error, :invalid_token}
     end
   end
-
 
   def deliver_user_confirmation_instructions(%User{} = user) do
     if user.confirmed_at do
@@ -308,7 +332,9 @@ defmodule ChatApi.Account do
     IO.inspect(context)
     IO.inspect(confirm_token)
 
-    hashed_token_changeset = UserToken.new_changeset_from_token_context(hashed_token, context, user)
+    hashed_token_changeset =
+      UserToken.new_changeset_from_token_context(hashed_token, context, user)
+
     Repo.insert(hashed_token_changeset)
 
     url = form_url(context, confirm_token)

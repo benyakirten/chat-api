@@ -5,10 +5,6 @@ defmodule ChatApiWeb.AuthJSON do
     %{user: serialize_user(user, profile), auth_token: auth_token, refresh_token: refresh_token}
   end
 
-  def signout(_opts) do
-    ""
-  end
-
   def refresh_auth(%{refresh_token: refresh_token, auth_token: auth_token}) do
     %{refresh_token: refresh_token, auth_token: auth_token}
   end
