@@ -22,7 +22,11 @@ defmodule ChatApi.Account.UserProfile do
   def changeset(profile, attrs \\ %{}) do
     profile
     |> cast(attrs, [:online, :hidden, :theme, :magnification])
-    |> validate_number(:magnification, greater_than_or_equal_to: 0.7, less_than_or_equal_to: 1.4)
+    |> validate_number(:magnification,
+      greater_than_or_equal_to: 0.7,
+      less_than_or_equal_to: 1.4,
+      message: "must be a number between 0.7 and 1.4"
+    )
     |> validate_format(:theme, ~r/^auto|day|night$/,
       message: "must be one of either 'auto', 'night' or 'auto'"
     )
