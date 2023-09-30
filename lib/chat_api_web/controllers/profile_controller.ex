@@ -53,4 +53,10 @@ defmodule ChatApiWeb.ProfileController do
       end
     end
   end
+
+  def update_profile(%Plug.Conn{assigns: %{user_id: user_id}} = conn, opts) do
+    with {:ok, profile} <- Account.update_profile_by_user_id(user_id, opts) do
+      render(conn, :update_profile, profile: profile)
+    end
+  end
 end
