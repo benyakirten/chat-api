@@ -30,6 +30,7 @@ defmodule ChatApiWeb.Router do
     patch("/password", ProfileController, :update_password)
     patch("/email", ProfileController, :update_email)
     patch("/profile", ProfileController, :update_profile)
+    # patch("/username", ProfileController)
     resources "/conversations", ConversationController, except: [:new, :edit]
   end
 
