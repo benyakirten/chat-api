@@ -68,7 +68,12 @@ defmodule ChatApi.Account.UserToken do
   @spec get_active_user_tokens_for_context(String.t(), token_type()) :: Ecto.Query.t()
   def get_active_user_tokens_for_context(user_id, context) do
     lifespan = token_lifespan_for_context(context)
-    from(t in UserToken, where: t.user_id == ^user_id and t.context == ^to_string(context) and t.inserted_at > ago(^lifespan, "day"))
+
+    from(t in UserToken,
+      where:
+        t.user_id == ^user_id and t.context == ^to_string(context) and
+          t.inserted_at > ago(^lifespan, "day")
+    )
   end
 
   def user_token_query(user_id, hashed_token) do
@@ -78,11 +83,11 @@ defmodule ChatApi.Account.UserToken do
   @spec hash_token(String.t()) :: {:ok, binary()} | {:error}
   def hash_token(token) do
     with {:ok, decoded_token} <- Base.url_decode64(token, padding: false),
-      hashed_token <- :crypto.hash(@hash_algorithm, decoded_token) do
-        {:ok, hashed_token}
-      else
-       _ -> {:error}
-      end
+         hashed_token <- :crypto.hash(@hash_algorithm, decoded_token) do
+      {:ok, hashed_token}
+    else
+      _ -> {:error}
+    end
   end
 
   @doc """
@@ -92,7 +97,7 @@ defmodule ChatApi.Account.UserToken do
   """
   def user_tokens_by_context_query(
         user_id,
-        contexts \\ [:refresh_token, :password_reset, :email_confirmation, :email_reset]
+        contexts \\ [:refresh_token, :password_reset, :email_confirmation, :email_change]
       ) do
     string_contexts = Enum.map(contexts, &to_string(&1))
     from(t in UserToken, where: t.user_id == ^user_id and t.context in ^string_contexts)
@@ -101,7 +106,7 @@ defmodule ChatApi.Account.UserToken do
   @spec remove_stale_token_query(Ecto.Multi.t()) :: Ecto.Multi.t()
   def remove_stale_token_query(multi_query) do
     Enum.reduce(
-      [:refresh_token, :password_reset, :email_confirmation, :email_reset],
+      [:refresh_token, :password_reset, :email_confirmation, :email_change],
       multi_query,
       fn acc, next ->
         lifespan = token_lifespan_for_context(next)

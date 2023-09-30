@@ -17,10 +17,12 @@ defmodule ChatApiWeb.Router do
     post("/signout", AuthController, :signout)
     post("/refresh", AuthController, :refresh_auth)
     post("/confirm", AuthController, :confirm_user)
-    post("/request_new_confirmation", AuthController, :request_new_confirmation)
-    post("/request_password_reset_token", AuthController, :request_password_reset_token)
-    post("/confirm_password_reset_token", AuthController, :confirm_password_reset_token)
-    post("/reset_password", AuthController, :reset_password)
+    # TODO: Improve the routing for this
+    post("/token/confirmation", AuthController, :request_new_confirmation)
+    post("/token/email", AuthController, :request_email_change_token)
+    post("/token/password/request", AuthController, :request_password_reset_token)
+    post("/token/password/confirm", AuthController, :confirm_password_reset_token)
+    post("/token/password/reset", AuthController, :reset_password)
   end
 
   scope "/api", ChatApiWeb do

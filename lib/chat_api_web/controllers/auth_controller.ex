@@ -100,18 +100,10 @@ defmodule ChatApiWeb.AuthController do
     end
   end
 
-  # This should require authentication
-  def update_email(conn, %{"token" => token, "email" => email, "password" => password}) do
-    with {:ok, user} <- Account.confirm_token(token, :email_change) do
-      case Account.update_user_email(
-             user,
-             password,
-             %{email: email}
-           ) do
-        {:ok, _} -> send_204(conn)
-        {:error, _, %Ecto.Changeset{} = changeset, _} -> {:error, changeset}
-        error -> error
-      end
+  def request_email_change_token(conn, %{"email" => email}) do
+    with user when not is_nil(user) <- Account.get_user_by_email(email),
+         {:ok} <- Account.deliver_user_email_change_instructions(user) do
+      send_204(conn)
     end
   end
 
