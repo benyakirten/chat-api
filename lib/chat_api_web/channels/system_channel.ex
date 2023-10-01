@@ -1,4 +1,5 @@
 defmodule ChatApiWeb.SystemChannel do
+  alias ChatApi.Token
   alias ChatApiWeb.Presence
   alias ChatApi.Account
   use ChatApiWeb, :channel
@@ -7,6 +8,16 @@ defmodule ChatApiWeb.SystemChannel do
     online_at: inspect(System.system_time(:second))
   })
   defp remove_user_id_from_presence(socket), do: Presence.untrack(socket, socket.assigns.user_id)
+  defp authenticate(socket, token) do
+    user_id = socket.assigns.user_id
+    with {:ok, parsed_id} <- Token.user_id_from_auth_token(token), true <- parsed_id == user_id do
+      :ok
+     else
+      _ ->
+        ChatApiWeb.Endpoint.broadcast!("users_socket:" <> user_id, "disconnect", %{})
+        :error
+     end
+  end
 
   @impl true
   def join("system:general", params, socket) do
@@ -32,6 +43,8 @@ defmodule ChatApiWeb.SystemChannel do
   end
 
   def handle_in("set_hidden", payload, socket) do
+    authenticate(socket, socket.params["token"])
+
     send(self(), :update_hidden_state)
     send(self(), :track_user)
 
@@ -39,6 +52,8 @@ defmodule ChatApiWeb.SystemChannel do
   end
 
   def handle_in("set_display_name", payload, socket) do
+    authenticate(socket, socket.params["token"])
+
     send(self(), :update_display_name)
     display_name = payload["display_name"]
 
@@ -46,7 +61,7 @@ defmodule ChatApiWeb.SystemChannel do
       if user.display_name == display_name do
         {:reply, :display_name_unchanged, socket}
       else
-        case  Account.update_display_name(user, display_name) do
+        case Account.update_display_name(user, display_name) do
           {:ok, updated_user} ->
             broadcast!(socket, "update_display_name", %{
               user_id: socket.assigns.user_id,
@@ -57,18 +72,6 @@ defmodule ChatApiWeb.SystemChannel do
         end
       end
     end
-  end
-
-  def handle_in("new_msg", payload, socket) do
-    broadcast!(socket, "new_msg", %{body: "I AM GLAD YOU SENT A MESSAGE", payload: payload})
-    {:noreply, socket}
-  end
-
-  # Channels can be used in a request/response fashion
-  # by sending replies to requests from the client
-  @impl true
-  def handle_in("ping", payload, socket) do
-    {:reply, {:ok, payload}, socket}
   end
 
   # It is also common to receive messages from the client and
