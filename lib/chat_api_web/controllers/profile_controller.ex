@@ -59,4 +59,9 @@ defmodule ChatApiWeb.ProfileController do
       render(conn, :update_profile, profile: profile)
     end
   end
+
+  def signout_all(%Plug.Conn{assigns: %{user_id: user_id}} = conn, _opts) do
+    Account.sign_out_all(user_id)
+    AuthController.send_204(conn)
+  end
 end

@@ -14,7 +14,6 @@ defmodule ChatApiWeb.Router do
     pipe_through(:auth)
     post("/login", AuthController, :login)
     post("/register", AuthController, :register)
-    post("/signout", AuthController, :signout)
     post("/refresh", AuthController, :refresh_auth)
     post("/confirm", AuthController, :confirm_user)
     # TODO: Improve the routing for this
@@ -27,11 +26,10 @@ defmodule ChatApiWeb.Router do
 
   scope "/api", ChatApiWeb do
     pipe_through(:api)
+    post("/signout", ProfileController, :signout_all)
     patch("/password", ProfileController, :update_password)
     patch("/email", ProfileController, :update_email)
     patch("/profile", ProfileController, :update_profile)
-    # patch("/username", ProfileController)
-    resources "/conversations", ConversationController, except: [:new, :edit]
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

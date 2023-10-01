@@ -6,7 +6,6 @@ defmodule ChatApi.Repo.Migrations.CreateUsers do
 
     create table(:users) do
       add(:email, :citext, null: false)
-      add(:user_name, :string, null: false)
       add(:hashed_password, :string, null: false)
       add(:confirmed_at, :naive_datetime)
 

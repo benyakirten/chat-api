@@ -6,7 +6,6 @@ defmodule ChatApi.Account.User do
 
   @type t :: %__MODULE__{
           email: String.t(),
-          user_name: String.t(),
           password: String.t() | nil,
           hashed_password: binary() | nil,
           confirmed_at: NaiveDateTime | nil
@@ -16,7 +15,6 @@ defmodule ChatApi.Account.User do
   @foreign_key_type :binary_id
   schema "users" do
     field(:email, :string)
-    field(:user_name, :string)
     field(:password, :string, virtual: true, redact: true)
     field(:hashed_password, :string, redact: true)
     field(:confirmed_at, :naive_datetime)
@@ -49,7 +47,6 @@ defmodule ChatApi.Account.User do
     |> cast(attrs, [:email, :password])
     |> validate_email()
     |> validate_password()
-    |> assign_user_name()
   end
 
   @email_regex ~r<(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])>
@@ -83,26 +80,6 @@ defmodule ChatApi.Account.User do
     |> delete_change(:password)
   end
 
-  defp assign_user_name(changeset) do
-    # Get a default value for a username
-    user_name =
-      case get_change(changeset, :user_name) do
-        name when is_binary(name) -> name
-        _ -> get_change(changeset, :email)
-      end
-
-    changeset
-    |> put_change(:user_name, user_name)
-    |> validate_user_name()
-  end
-
-  defp validate_user_name(changeset) do
-    changeset
-    |> validate_required([:user_name])
-    # These are arbitrary - we may want to change them
-    |> validate_length(:user_name, min: 3, max: 20)
-  end
-
   @doc """
   Checks if the user's hashed password matches the password attempt when it is hashed.
   """
@@ -128,31 +105,6 @@ defmodule ChatApi.Account.User do
     |> case do
       %{changes: %{email: _}} = changeset -> changeset
       %{} = changeset -> add_error(changeset, :email, "did not change")
-    end
-  end
-
-  def user_name_changeset(user, attrs) do
-    user
-    |> cast(attrs, [:user_name])
-    |> validate_user_name()
-    |> case do
-      %{changes: %{user_name: _}} = changeset -> changeset
-      %{} = changeset -> add_error(changeset, :email, "did not change")
-    end
-  end
-
-  @doc """
-  A user changeset for changing the user_name.
-
-  It requires the user name to change otherwise an error is added.
-  """
-  def username_changeset(user, attrs) do
-    user
-    |> cast(attrs, [:user_name])
-    |> validate_user_name()
-    |> case do
-      %{changes: %{user_name: _}} = changeset -> changeset
-      %{} = changeset -> add_error(changeset, :user_name, "did not change")
     end
   end
 

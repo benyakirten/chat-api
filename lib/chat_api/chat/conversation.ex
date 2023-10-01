@@ -17,6 +17,6 @@ defmodule ChatApi.Chat.Conversation do
   def changeset(conversation, attrs) do
     conversation
     |> cast(attrs, [:private, :alias])
-    |> validate_required([:private, :alias])
+    |> validate_required([:private])
   end
 end

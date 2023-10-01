@@ -144,6 +144,8 @@ defmodule ChatApi.Account.UserToken do
   in the database and 2. if the token is still valid.
 
   This allows all tokens (or a specific token) for a user to be revoked
+
+  TODO: Figure out the best way to do this in a singular Ecto.Multi transaction
   """
   @spec verify_hashed_token(String.t(), token_type()) :: {:ok, User.t(), UserToken.t()} | {:error}
   def verify_hashed_token(token, context) do
