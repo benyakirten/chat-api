@@ -6,7 +6,6 @@ defmodule ChatApi.Account.UserProfile do
   alias ChatApi.Repo
 
   @type t :: %__MODULE__{
-          username: String.t(),
           hidden: :boolean,
           theme: String.t(),
           magnification: Decimal.t()
@@ -15,10 +14,9 @@ defmodule ChatApi.Account.UserProfile do
   @foreign_key_type :binary_id
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "user_profiles" do
-    field(:username, :string)
-    field(:hidden, :boolean)
-    field(:theme, :string)
-    field(:magnification, :decimal)
+    field(:hidden, :boolean, default: false)
+    field(:theme, :string, default: "auto")
+    field(:magnification, :decimal, default: 1.0)
 
     belongs_to(:user, User)
 
@@ -28,7 +26,7 @@ defmodule ChatApi.Account.UserProfile do
   @doc false
   def changeset(profile, attrs \\ %{}) do
     profile
-    |> cast(attrs, [:username, :hidden, :theme, :magnification])
+    |> cast(attrs, [:display_name, :hidden, :theme, :magnification])
     |> validate_number(:magnification,
       greater_than_or_equal_to: 0.7,
       less_than_or_equal_to: 1.4,
@@ -39,38 +37,10 @@ defmodule ChatApi.Account.UserProfile do
     )
   end
 
-  @doc """
-  Create a new profile for a user with certain defaults.
-  """
-  @spec new_profile_changeset(String.t(), User.t()) :: Ecto.Changeset.t()
-  def new_profile_changeset(user_name, user) do
-    %UserProfile{}
-    |> cast(
-      %{user_name: user_name, magnification: 1.0, theme: "auto", hidden: false},
-      [:username, :magnification, :theme, :hidden]
-    )
-    |> put_assoc(:user_id, user)
-  end
-
   def changeset_by_user_id(user_id, attrs) do
     case Repo.one(from p in UserProfile, where: p.user_id == ^user_id) do
       nil -> {:error, :not_found}
       profile -> changeset(profile, attrs)
-    end
-  end
-
-  @doc """
-  A user changeset for changing the user_name.
-
-  It requires the user name to change otherwise an error is added.
-  """
-  def username_changeset(user, attrs) do
-    user
-    |> cast(attrs, [:username])
-    |> validate_length(:username, min: 3, max: 20)
-    |> case do
-      %{changes: %{user_name: _}} = changeset -> changeset
-      %{} = changeset -> add_error(changeset, :username, "did not change")
     end
   end
 end

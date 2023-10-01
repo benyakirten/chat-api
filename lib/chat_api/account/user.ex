@@ -8,7 +8,8 @@ defmodule ChatApi.Account.User do
           email: String.t(),
           password: String.t() | nil,
           hashed_password: binary() | nil,
-          confirmed_at: NaiveDateTime | nil
+          confirmed_at: NaiveDateTime | nil,
+          display_name: String.t()
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -18,6 +19,7 @@ defmodule ChatApi.Account.User do
     field(:password, :string, virtual: true, redact: true)
     field(:hashed_password, :string, redact: true)
     field(:confirmed_at, :naive_datetime)
+    field(:display_name, :string)
 
     has_many(:users_tokens, UserToken)
     has_one(:user_profiles, UserProfile)
@@ -38,13 +40,13 @@ defmodule ChatApi.Account.User do
     have 1 uppercase and 1 lowercase letter, a number and one of the following: !@#$%^&*+`~'
   3. Hashes the password
 
-  If a user name is not specified, the email is used as a default value.
-
   TODO: Add regular tests and doc tests
   """
   def registration_changeset(user, attrs) do
     user
-    |> cast(attrs, [:email, :password])
+    |> cast(attrs, [:email, :password, :display_name])
+    |> validate_required([:email, :password, :display_name])
+    |> validate_length(:display_name, min: 3, max: 20)
     |> validate_email()
     |> validate_password()
   end
@@ -52,7 +54,6 @@ defmodule ChatApi.Account.User do
   @email_regex ~r<(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])>
   defp validate_email(changeset) do
     changeset
-    |> validate_required([:email])
     |> validate_format(:email, @email_regex, message: "must be a valid email")
     |> validate_length(:email, max: 160, message: "must be at most 160 characters long")
     |> unsafe_validate_unique(:email, ChatApi.Repo)
@@ -61,7 +62,6 @@ defmodule ChatApi.Account.User do
 
   defp validate_password(changeset) do
     changeset
-    |> validate_required([:password])
     |> validate_length(:password, min: 12, max: 72)
     # TODO: Combine these into one regex
     |> validate_format(:password, ~r/[a-z]/, message: "must contain a lowercase letter")
@@ -144,5 +144,12 @@ defmodule ChatApi.Account.User do
   def confirm_email_changeset(user) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
     change(user, confirmed_at: now)
+  end
+
+  def display_name_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:display_name])
+    |> validate_required([:display_name])
+    |> validate_length(:display_name, min: 3, max: 20)
   end
 end

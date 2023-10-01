@@ -16,8 +16,9 @@ defmodule ChatApiWeb.AuthController do
     end
   end
 
-  def register(conn, %{"email" => email, "password" => password}) do
-    with {:ok, user, profile, auth_token, refresh_token} <- Account.create_user(email, password) do
+  def register(conn, %{"email" => email, "password" => password} = opts) do
+    with {:ok, user, profile, auth_token, refresh_token} <-
+           Account.create_user(email, password, opts[:display_name]) do
       # Signing up and signing in will have the same response body
       render(conn, :login,
         user: user,
@@ -99,5 +100,5 @@ defmodule ChatApiWeb.AuthController do
   end
 
   # Requesting an email change token will require the user to be authenticated
-  # Changing password without reset/changing username/changing email without a token/changing profile will have to be done with an auth token
+  # Changing password without reset/changing display_name/changing email without a token/changing profile will have to be done with an auth token
 end

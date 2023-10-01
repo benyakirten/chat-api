@@ -15,6 +15,7 @@ defmodule ChatApi.Account.UserNotifier do
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
     from = Application.fetch_env!(:chat_api, ChatApi.Account.UserNotifier)[:from_email]
+
     email =
       new()
       |> to(recipient)
@@ -30,9 +31,13 @@ defmodule ChatApi.Account.UserNotifier do
   end
 
   @spec deliver_email(limited_token_type(), User.t(), String.t()) :: {:ok}
-  def deliver_email(:email_confirmation, user, url), do: deliver_confirmation_instructions(user, url)
+  def deliver_email(:email_confirmation, user, url),
+    do: deliver_confirmation_instructions(user, url)
+
   def deliver_email(:email_change, user, url), do: deliver_update_email_instructions(user, url)
-  def deliver_email(:password_reset, user, url), do: deliver_reset_password_instructions(user, url)
+
+  def deliver_email(:password_reset, user, url),
+    do: deliver_reset_password_instructions(user, url)
 
   @doc """
   Deliver instructions to confirm account.
@@ -42,7 +47,7 @@ defmodule ChatApi.Account.UserNotifier do
 
     ==============================
 
-    Hi #{user.user_name},
+    Hi #{user.display_name},
 
     You can confirm your account by visiting the URL below:
 

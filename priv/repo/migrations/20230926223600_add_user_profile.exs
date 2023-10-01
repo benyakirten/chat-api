@@ -12,7 +12,6 @@ defmodule ChatApi.Repo.Migrations.AddUserProfile do
     create(unique_index(:block_list, [:blocker_id, :blocked_id]))
 
     create table(:user_profiles) do
-      add(:username, :string, null: false)
       add(:hidden, :boolean, null: false, default: false)
       add(:theme, :string, null: false, default: "auto")
       add(:magnification, :decimal, scale: 1, precision: 2, null: false, default: 1.0)
@@ -22,6 +21,5 @@ defmodule ChatApi.Repo.Migrations.AddUserProfile do
     end
 
     create(index(:user_profiles, [:user_id]))
-    create(index(:user_profiles, [:username]))
   end
 end

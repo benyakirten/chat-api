@@ -6,6 +6,7 @@ defmodule ChatApi.Repo.Migrations.CreateUsers do
 
     create table(:users) do
       add(:email, :citext, null: false)
+      add(:display_name, :string, null: false)
       add(:hashed_password, :string, null: false)
       add(:confirmed_at, :naive_datetime)
 
@@ -13,5 +14,6 @@ defmodule ChatApi.Repo.Migrations.CreateUsers do
     end
 
     create(unique_index(:users, [:email]))
+    create(index(:users, [:display_name]))
   end
 end

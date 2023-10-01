@@ -29,7 +29,7 @@ defmodule ChatApiWeb.AuthJSON do
       id: user.id,
       email: user.email,
       confirmed_at: user.confirmed_at,
-      user_name: profile.username,
+      user_name: user.display_name,
       hidden: profile.hidden,
       theme: profile.theme,
       magnification: profile.magnification

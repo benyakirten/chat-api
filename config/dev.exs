@@ -2,7 +2,7 @@ import Config
 
 # Configure your database
 config :chat_api, ChatApi.Repo,
-  username: "postgres",
+  display_name: "postgres",
   password: "postgres",
   hostname: "localhost",
   database: "chat_api_dev",
@@ -66,8 +66,6 @@ config :phoenix, :plug_init_mode, :runtime
 config :swoosh, :api_client, false
 
 # Set frontend URL for generating links
-config :chat_api, ChatApi.Account,
-  frontend_url: "http://localhost:4000"
+config :chat_api, ChatApi.Account, frontend_url: "http://localhost:4000"
 
-config :chat_api, ChatApi.Account.UserNotifier,
-  from_email: "example@example.com"
+config :chat_api, ChatApi.Account.UserNotifier, from_email: "example@example.com"

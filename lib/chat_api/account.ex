@@ -66,15 +66,21 @@ defmodule ChatApi.Account do
       {:error, %Changeset{}}
 
   """
-  def create_user(email, password, user_name \\ nil)
+  def create_user(email, password, display_name \\ nil)
       when is_binary(email) and is_binary(password) do
     # TODO: Reduce this to 1 database transaction
+    # Multiple database transactions is not only inefficient but error prone
     with {:ok, user} <-
            %User{}
-           |> User.registration_changeset(%{email: email, password: password})
+           |> User.registration_changeset(%{
+             email: email,
+             password: password,
+             display_name: display_name || email
+           })
            |> Repo.insert(),
          {:ok, profile} <-
-           UserProfile.new_profile_changeset(user_name || email, user)
+           %UserProfile{}
+           |> UserProfile.changeset()
            |> Repo.insert(),
          {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
          {:ok, _} <- Repo.insert(new_token_changeset) do
