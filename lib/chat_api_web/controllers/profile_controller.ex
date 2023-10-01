@@ -77,19 +77,4 @@ defmodule ChatApiWeb.ProfileController do
       AuthController.send_204(conn)
     end
   end
-
-  # This should be done over sockets so all users can be updated
-  # def update_display_name(%Plug.Conn{assigns: %{user_id: user_id}} = conn, %{"display_name" => display_name}) do
-  #   # TODO: Clean this up
-  #   with user when not is_nil(user) <- Account.get_user(user_id) do
-  #     if user.display_name == display_name do
-  #       {:error, :display_name_unchanged}
-  #     else
-  #       case  Account.update_display_name(user, display_name) do
-  #         {:ok, updated_user} -> render(conn, :update_display_name, [user: updated_user])
-  #         error -> error
-  #       end
-  #     end
-  #   end
-  # end
 end
