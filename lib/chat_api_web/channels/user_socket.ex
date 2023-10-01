@@ -1,6 +1,5 @@
 defmodule ChatApiWeb.UserSocket do
   alias ChatApi.Token
-  alias ChatApi.Account
   use Phoenix.Socket
 
   # A Socket handler

@@ -3,19 +3,25 @@ defmodule ChatApiWeb.SystemChannel do
   use ChatApiWeb, :channel
 
   @impl true
-  def join("system:general", _params, socket) do
+  def join("system:general", params, socket) do
     send(self(), :after_join)
-    {:ok, socket}
+    {:ok, assign(socket, :hidden, params["hidden"] or false)}
   end
 
   @impl true
   def handle_info(:after_join, socket) do
-    {:ok, _} =
-      Presence.track(socket, socket.assigns.user_id, %{
-        online_at: inspect(System.system_time(:second))
-      })
+    if not socket.assigns.hidden do
+      {:ok, _} =
+        Presence.track(socket, socket.assigns.user_id, %{
+          online_at: inspect(System.system_time(:second))
+        })
+    end
 
     push(socket, "presence_state", Presence.list(socket))
+    {:noreply, socket}
+  end
+
+  def handle_in("set_hidden", payload, socket) do
     {:noreply, socket}
   end
 

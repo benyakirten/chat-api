@@ -10,7 +10,7 @@ defmodule ChatApiWeb.ErrorJSON do
   # the template name. For example, "404.json" becomes
   # "Not Found".
   def render(template, assigns) do
-    error_detail = assigns[:error] || Phoenix.Controller.status_message_from_template(template)
+    error_detail = assigns[:error] or Phoenix.Controller.status_message_from_template(template)
     %{errors: %{detail: error_detail}}
   end
 end
