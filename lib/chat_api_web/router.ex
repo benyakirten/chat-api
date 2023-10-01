@@ -31,7 +31,6 @@ defmodule ChatApiWeb.Router do
     patch("/password", ProfileController, :update_password)
     patch("/email", ProfileController, :update_email)
     patch("/profile", ProfileController, :update_profile)
-    patch("/display_name", ProfileController, :update_display_name)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

@@ -3,9 +3,9 @@ defmodule ChatApiWeb.SystemChannel do
   use ChatApiWeb, :channel
 
   @impl true
-  def join("system:general", %{"user_id" => user_id}, socket) do
+  def join("system:general", _params, socket) do
     send(self(), :after_join)
-    {:ok, assign(socket, :user_id, user_id)}
+    {:ok, socket}
   end
 
   @impl true

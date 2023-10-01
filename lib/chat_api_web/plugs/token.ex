@@ -22,7 +22,7 @@ defmodule ChatApiWeb.Plugs.Token do
 
   def call(conn, _opts) do
     with {:ok, token} <- get_token(conn),
-         {:ok, user_id} <- Token.user_from_auth_token(token) do
+         {:ok, user_id} <- Token.user_id_from_auth_token(token) do
       assign(conn, :user_id, user_id)
     else
       {:error, reason} ->

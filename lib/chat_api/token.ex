@@ -24,9 +24,9 @@ defmodule ChatApi.Token do
   @doc """
   Check a token for validity and if it is, get the user ID from it.
   """
-  @spec user_from_auth_token(String.t()) ::
+  @spec user_id_from_auth_token(String.t()) ::
           {:error, :expired | :invalid | :missing} | {:ok, String.t()}
-  def user_from_auth_token(token) do
+  def user_id_from_auth_token(token) do
     token_resolution =
       Phoenix.Token.verify(
         ChatApiWeb.Endpoint,
