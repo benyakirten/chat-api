@@ -26,7 +26,7 @@ defmodule ChatApi.Account.UserProfile do
   @doc false
   def changeset(profile, attrs \\ %{}) do
     profile
-    |> cast(attrs, [:hidden, :theme, :magnification])
+    |> cast(attrs, [:theme, :magnification])
     |> validate_number(:magnification,
       greater_than_or_equal_to: 0.7,
       less_than_or_equal_to: 1.4,
@@ -36,7 +36,6 @@ defmodule ChatApi.Account.UserProfile do
       message: "must be one of either 'auto', 'night' or 'auto'"
     )
   end
-
   def changeset_by_user_id(user_id, attrs) do
     case Repo.one(from p in UserProfile, where: p.user_id == ^user_id) do
       nil -> {:error, :not_found}

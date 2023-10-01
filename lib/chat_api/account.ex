@@ -75,7 +75,7 @@ defmodule ChatApi.Account do
            |> User.registration_changeset(%{
              email: email,
              password: password,
-             display_name: display_name or email
+             display_name: display_name || email
            })
            |> Repo.insert(),
          {:ok, profile} <-

@@ -5,7 +5,7 @@ defmodule ChatApiWeb.SystemChannel do
   @impl true
   def join("system:general", params, socket) do
     send(self(), :after_join)
-    {:ok, assign(socket, :hidden, params["hidden"] or false)}
+    {:ok, assign(socket, :hidden, params["hidden"] || false)}
   end
 
   @impl true
