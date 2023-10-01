@@ -152,12 +152,12 @@ defmodule ChatApi.Account do
   """
   @spec sign_out_all(String.t()) :: any()
   def sign_out_all(user_id) do
-    Repo.delete_all(UserToken.user_tokens_by_context_query(user_id, [:refresh_token]))
+    Repo.delete_all(UserToken.user_tokens_by_context_query(user_id, [:refresh]))
   end
 
   @spec use_refresh_token(String.t()) :: {:ok, String.t(), binary()} | {:error, :invalid_token}
   def use_refresh_token(token) do
-    case UserToken.verify_hashed_token(token, :refresh_token) do
+    case UserToken.verify_hashed_token(token, :refresh) do
       {:ok, user, used_token} ->
         {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
 
@@ -178,7 +178,7 @@ defmodule ChatApi.Account do
     {refresh_token, hashed_token} = UserToken.build_hashed_token()
 
     hashed_token_changeset =
-      UserToken.new_changeset_from_token_context(hashed_token, :refresh_token, user)
+      UserToken.new_changeset_from_token_context(hashed_token, :refresh, user)
 
     {auth_token, refresh_token, hashed_token_changeset}
   end

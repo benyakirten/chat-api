@@ -6,7 +6,7 @@ defmodule ChatApi.Account.UserProfile do
   alias ChatApi.Repo
 
   @type t :: %__MODULE__{
-          user_name: String.t(),
+          username: String.t(),
           hidden: :boolean,
           theme: String.t(),
           magnification: Decimal.t()
@@ -15,7 +15,7 @@ defmodule ChatApi.Account.UserProfile do
   @foreign_key_type :binary_id
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "user_profiles" do
-    field(:user_name, :string)
+    field(:username, :string)
     field(:hidden, :boolean)
     field(:theme, :string)
     field(:magnification, :decimal)
@@ -28,7 +28,7 @@ defmodule ChatApi.Account.UserProfile do
   @doc false
   def changeset(profile, attrs \\ %{}) do
     profile
-    |> cast(attrs, [:user_name, :hidden, :theme, :magnification])
+    |> cast(attrs, [:username, :hidden, :theme, :magnification])
     |> validate_number(:magnification,
       greater_than_or_equal_to: 0.7,
       less_than_or_equal_to: 1.4,
@@ -47,7 +47,7 @@ defmodule ChatApi.Account.UserProfile do
     %UserProfile{}
     |> cast(
       %{user_name: user_name, magnification: 1.0, theme: "auto", hidden: false},
-      [:user_name, :magnification, :theme, :hidden]
+      [:username, :magnification, :theme, :hidden]
     )
     |> put_assoc(:user_id, user)
   end
@@ -66,11 +66,11 @@ defmodule ChatApi.Account.UserProfile do
   """
   def username_changeset(user, attrs) do
     user
-    |> cast(attrs, [:user_name])
-    |> validate_length(:user_name, min: 3, max: 20)
+    |> cast(attrs, [:username])
+    |> validate_length(:username, min: 3, max: 20)
     |> case do
       %{changes: %{user_name: _}} = changeset -> changeset
-      %{} = changeset -> add_error(changeset, :user_name, "did not change")
+      %{} = changeset -> add_error(changeset, :username, "did not change")
     end
   end
 end

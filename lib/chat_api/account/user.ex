@@ -63,6 +63,7 @@ defmodule ChatApi.Account.User do
     changeset
     |> validate_required([:password])
     |> validate_length(:password, min: 12, max: 72)
+    # TODO: Combine these into one regex
     |> validate_format(:password, ~r/[a-z]/, message: "must contain a lowercase letter")
     |> validate_format(:password, ~r/[A-Z]/, message: "must contain an uppercase letter")
     |> validate_format(:password, ~r/[0-9]/, message: "must contain at least one number")

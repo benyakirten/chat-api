@@ -20,7 +20,7 @@ defmodule ChatApi.Account.UserToken do
           token: :binary,
           context: String.t()
         }
-  @type token_type :: :refresh_token | :password_reset | :email_confirmation | :email_change
+  @type token_type :: :refresh | :password_reset | :email_confirmation | :email_change
 
   @hash_algorithm :sha256
   @rand_size 32
@@ -50,7 +50,7 @@ defmodule ChatApi.Account.UserToken do
   end
 
   @spec token_lifespan_for_context(token_type) :: number()
-  defp token_lifespan_for_context(:refresh_token), do: @refresh_token_lifespan_in_days
+  defp token_lifespan_for_context(:refresh), do: @refresh_token_lifespan_in_days
   defp token_lifespan_for_context(:password_reset), do: @password_reset_token_lifespan_in_days
   defp token_lifespan_for_context(:email_confirmation), do: @email_confirm_token_lifespan_in_days
   defp token_lifespan_for_context(:email_change), do: @email_change_token_lifespan_in_days
@@ -97,7 +97,7 @@ defmodule ChatApi.Account.UserToken do
   """
   def user_tokens_by_context_query(
         user_id,
-        contexts \\ [:refresh_token, :password_reset, :email_confirmation, :email_change]
+        contexts \\ [:refresh, :password_reset, :email_confirmation, :email_change]
       ) do
     string_contexts = Enum.map(contexts, &to_string(&1))
     from(t in UserToken, where: t.user_id == ^user_id and t.context in ^string_contexts)
@@ -106,7 +106,7 @@ defmodule ChatApi.Account.UserToken do
   @spec remove_stale_token_query(Ecto.Multi.t()) :: Ecto.Multi.t()
   def remove_stale_token_query(multi_query) do
     Enum.reduce(
-      [:refresh_token, :password_reset, :email_confirmation, :email_change],
+      [:refresh, :password_reset, :email_confirmation, :email_change],
       multi_query,
       fn acc, next ->
         lifespan = token_lifespan_for_context(next)
