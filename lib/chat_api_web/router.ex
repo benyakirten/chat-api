@@ -1,6 +1,8 @@
 defmodule ChatApiWeb.Router do
   use ChatApiWeb, :router
 
+  # NEVER EVER ALIAS YOUR CONTROLLERS IN THIS FILE
+
   pipeline :api do
     plug(:accepts, ["json"])
     plug(ChatApiWeb.Plugs.Token)
@@ -16,20 +18,20 @@ defmodule ChatApiWeb.Router do
     post("/register", AuthController, :register)
     post("/refresh", AuthController, :refresh_auth)
     post("/confirm", AuthController, :confirm_user)
-    # TODO: Improve the routing for this
-    post("/token/confirmation", AuthController, :request_new_confirmation)
-    post("/token/email", AuthController, :request_email_change_token)
-    post("/token/password/request", AuthController, :request_password_reset_token)
-    post("/token/password/confirm", AuthController, :confirm_password_reset_token)
-    post("/token/password/reset", AuthController, :reset_password)
+    post("/password/request", AuthController, :request_password_reset_token)
+    post("/password/confirm", AuthController, :confirm_password_reset_token)
+    post("/password/reset", AuthController, :reset_password)
   end
 
   scope "/api", ChatApiWeb do
     pipe_through(:api)
-    post("/signout", ProfileController, :signout_all)
+    post("/signout_all", ProfileController, :signout_all)
+    post("/token/email_confirm", ProfileController, :request_new_confirmation_token)
+    post("/token/email_change", ProfileController, :request_email_change_token)
     patch("/password", ProfileController, :update_password)
     patch("/email", ProfileController, :update_email)
     patch("/profile", ProfileController, :update_profile)
+    patch("/display_name", ProfileController, :update_display_name)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

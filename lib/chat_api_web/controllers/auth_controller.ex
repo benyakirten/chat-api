@@ -49,13 +49,6 @@ defmodule ChatApiWeb.AuthController do
     end
   end
 
-  def request_new_confirmation(conn, %{"email" => email}) do
-    with user when not is_nil(user) <- Account.get_user_by_email(email),
-         {:ok} <- Account.deliver_user_confirmation_instructions(user) do
-      send_204(conn)
-    end
-  end
-
   def request_password_reset_token(conn, %{"email" => email}) do
     with user when not is_nil(user) <- Account.get_user_by_email(email),
          {:ok} <- Account.deliver_user_password_reset_instructions(user) do
@@ -91,14 +84,4 @@ defmodule ChatApiWeb.AuthController do
       end
     end
   end
-
-  def request_email_change_token(conn, %{"email" => email}) do
-    with user when not is_nil(user) <- Account.get_user_by_email(email),
-         {:ok} <- Account.deliver_user_email_change_instructions(user) do
-      send_204(conn)
-    end
-  end
-
-  # Requesting an email change token will require the user to be authenticated
-  # Changing password without reset/changing display_name/changing email without a token/changing profile will have to be done with an auth token
 end

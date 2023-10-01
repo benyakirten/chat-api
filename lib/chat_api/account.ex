@@ -81,6 +81,7 @@ defmodule ChatApi.Account do
          {:ok, profile} <-
            %UserProfile{}
            |> UserProfile.changeset()
+           |> Ecto.Changeset.put_assoc(:user, user)
            |> Repo.insert(),
          {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
          {:ok, _} <- Repo.insert(new_token_changeset) do
@@ -132,6 +133,11 @@ defmodule ChatApi.Account do
     |> Ecto.Multi.update(:user_update, changeset)
     |> Ecto.Multi.delete_all(:delete_tokens, UserToken.user_tokens_by_context_query(user_id))
     |> Repo.transaction()
+  end
+
+  def update_display_name(user, display_name) do
+    User.display_name_changeset(user, %{display_name: display_name})
+    |> Repo.update()
   end
 
   @doc """
@@ -261,5 +267,6 @@ defmodule ChatApi.Account do
 
     url = form_url(context, confirm_token)
     UserNotifier.deliver_email(context, user, url)
+    {:ok}
   end
 end

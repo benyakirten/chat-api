@@ -9,12 +9,13 @@ defmodule ChatApiWeb.ChangesetJSON do
   end
 
   # TODO: find a better place for these
-  def error(%{reason: :expired}), do: format_error("Access Token Expired")
-  def error(%{reason: :invalid}), do: format_error("Access Token Invalid")
-  def error(%{reason: :missing}), do: format_error("Access Token Missing")
-  def error(%{reason: :invalid_credentials}), do: format_error("Invalid Email and/or Password")
-  def error(%{reason: :invalid_token}), do: format_error("Invalid Token")
-  def error(%{reason: :invalid_inputs}), do: format_error("Invalid Input")
+  def error(%{reason: :expired}), do: format_error("Access token expired")
+  def error(%{reason: :invalid}), do: format_error("Access token invalid")
+  def error(%{reason: :missing}), do: format_error("Access token missing")
+  def error(%{reason: :invalid_credentials}), do: format_error("Invalid email and/or password")
+  def error(%{reason: :invalid_token}), do: format_error("Invalid token")
+  def error(%{reason: :invalid_inputs}), do: format_error("Invalid input")
+  def error(%{reason: :display_name_unchanged}), do: format_error("Display name must be different than previous value")
 
   # Make the code a little more DRY
   @spec format_error(String.t()) :: map()

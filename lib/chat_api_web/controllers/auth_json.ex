@@ -13,23 +13,24 @@ defmodule ChatApiWeb.AuthJSON do
     %{success: true, confirmed_at: user.confirmed_at}
   end
 
-  def confirm_password_reset_token(%{user: user}) do
+  def confirm_token(%{user: user}) do
     %{success: true, user: serialize_user(user)}
   end
 
-  defp serialize_user(%User{} = user) do
+  def serialize_user(%User{} = user) do
     %{
       id: user.id,
-      email: user.email
+      email: user.email,
+      display_name: user.display_name
     }
   end
 
-  defp serialize_user(%User{} = user, %UserProfile{} = profile) do
+  def serialize_user(%User{} = user, %UserProfile{} = profile) do
     %{
       id: user.id,
       email: user.email,
       confirmed_at: user.confirmed_at,
-      user_name: user.display_name,
+      display_name: user.display_name,
       hidden: profile.hidden,
       theme: profile.theme,
       magnification: profile.magnification
