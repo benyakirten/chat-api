@@ -70,30 +70,48 @@ defmodule ChatApi.Account do
       when is_binary(email) and is_binary(password) do
     # TODO: Reduce this to 1 database transaction
     # Multiple database transactions is not only inefficient but error prone
-    with {:ok, user} <-
-           %User{}
-           |> User.registration_changeset(%{
-             email: email,
-             password: password,
-             display_name: display_name || email
-           })
-           |> Repo.insert(),
-         {:ok, profile} <-
-           %UserProfile{}
-           |> UserProfile.changeset()
-           |> Ecto.Changeset.put_assoc(:user, user)
-           |> Repo.insert(),
-         {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
-         {:ok, _} <- Repo.insert(new_token_changeset) do
-      deliver_user_confirmation_instructions(user)
-      {:ok, user, profile, auth_token, refresh_token}
-    else
-      changeset_or_error ->
-        case changeset_or_error do
-          {:error, reason} -> {:error, reason}
-          changeset -> {:error, changeset}
-        end
+    transaction = Ecto.Multi.new()
+    |> multi_insert_user(email, password, display_name || email)
+    |> multi_insert_profile()
+    |> multi_create_tokens()
+
+    case Repo.transaction(transaction) do
+      {:ok, %{user: user, profile: profile, tokens: {auth_token, refresh_token}}} ->
+        deliver_user_confirmation_instructions(user)
+        {:ok, user, profile, auth_token, refresh_token}
+      {:error, reason} -> {:error, reason}
+      changeset -> {:error, changeset}
     end
+  end
+
+  defp multi_insert_user(changeset, email, password, display_name) do
+    Ecto.Multi.insert(changeset, :user,
+      %User{}
+      |> User.registration_changeset(%{
+        email: email,
+        password: password,
+        display_name: display_name
+      })
+    )
+  end
+
+  defp multi_insert_profile(changeset) do
+    Ecto.Multi.run(changeset, :profile, fn _repo, %{user: user} ->
+      %UserProfile{}
+      |> UserProfile.changeset()
+      |> Ecto.Changeset.put_assoc(:user, user)
+      |> Repo.insert()
+    end)
+  end
+
+  defp multi_create_tokens(changeset) do
+    Ecto.Multi.run(changeset, :tokens, fn _repo, %{user: user} ->
+      {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
+      case Repo.insert(new_token_changeset) do
+        {:ok, _} -> {:ok, {auth_token, refresh_token}}
+        error -> error
+      end
+    end)
   end
 
   @doc """
