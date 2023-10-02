@@ -19,12 +19,7 @@ defmodule ChatApi.Chat.Message do
   @doc false
   def changeset(message, attrs) do
     message
-    |> cast(attrs, [:content])
+    |> cast(attrs, [:content, :user_id, :conversation_id])
     |> validate_required([:content])
-  end
-
-  def add_user_and_conversation(message, user_id, conversation_id) do
-    message
-    |> cast(%{user_id: user_id, conversation_id: conversation_id}, [:user_id, :conversation_id])
   end
 end

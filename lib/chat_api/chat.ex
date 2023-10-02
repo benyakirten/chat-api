@@ -6,7 +6,8 @@ defmodule ChatApi.Chat do
   import Ecto.Query, warn: false
   alias ChatApi.Repo
 
-  alias ChatApi.Chat.Conversation
+  alias ChatApi.Chat.{Conversation, Message}
+  alias ChatApi.Account.User
 
   @doc """
   Returns the list of conversations.
@@ -71,6 +72,10 @@ defmodule ChatApi.Chat do
     conversation
     |> Conversation.changeset(attrs)
     |> Repo.update()
+  end
+
+  def get_user_conversations(user_id) do
+    Repo.all(Conversation.user_conversations_query(user_id))
   end
 
   @doc """
