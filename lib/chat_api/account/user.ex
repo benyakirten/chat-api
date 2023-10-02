@@ -2,6 +2,7 @@ defmodule ChatApi.Account.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias ChatApi.Chat.Message
   alias ChatApi.Account.{UserProfile, UserToken}
 
   @type t :: %__MODULE__{
@@ -23,6 +24,7 @@ defmodule ChatApi.Account.User do
 
     has_many(:users_tokens, UserToken)
     has_one(:user_profiles, UserProfile)
+    has_many(:messages, Message)
     # Using an atom
     many_to_many(:conversations, ChatApi.Chat.Conversation, join_through: "users_conversations")
 
