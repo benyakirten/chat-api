@@ -25,8 +25,8 @@ defmodule ChatApi.Account.User do
     has_many(:users_tokens, UserToken)
     has_one(:user_profiles, UserProfile)
     has_many(:messages, Message)
-    # Using an atom
-    many_to_many(:conversations, ChatApi.Chat.Conversation, join_through: "users_conversations")
+
+    many_to_many(:conversations, ChatApi.Chat.Conversation, join_through: "users_conversations", on_replace: :delete)
 
     timestamps()
   end
