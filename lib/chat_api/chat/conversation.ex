@@ -63,4 +63,34 @@ defmodule ChatApi.Chat.Conversation do
     conversation_ids = for conversation <- conversations, do: conversation.id
     from(c in Conversation, join: u in assoc(c, :users), where: c.id in ^conversation_ids and u.id != ^current_user_id, distinct: u, select: u)
   end
+
+  def find_private_conversation_by_users(user_id1, user_id2) do
+    # The users_conversations table IDs is represented as the raw binaries,
+    # not strings. So we need to convert the strings to
+    # binaries because it is much easier than converting the binaries
+    # to strings inside of the clause
+    user_ids = [user_id1, user_id2]
+    |> Stream.map(&Ecto.UUID.dump/1)
+    |> Stream.filter(fn result -> result != :error end)
+    |> Stream.map(fn {:ok, uuid} -> uuid end)
+    |> Enum.to_list()
+
+    if length(user_ids) == 2 do
+      from(
+          c in Conversation,
+          where: c.private == true,
+          join: uc in subquery(
+            from uc in "users_conversations",
+            where: uc.user_id in ^user_ids,
+            group_by: uc.conversation_id,
+            select: uc.conversation_id,
+            having: count(uc.user_id) == ^length(user_ids)
+          ),
+          on: c.id == uc.conversation_id,
+          group_by: c.id
+        )
+    else
+      {:error, :invalid_user_ids}
+    end
+  end
 end
