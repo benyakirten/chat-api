@@ -1,8 +1,8 @@
 defmodule ChatApiWeb.AuthJSON do
   alias ChatApi.Account.{User, UserProfile}
 
-  def login(%{user: user, profile: profile, auth_token: auth_token, refresh_token: refresh_token}) do
-    %{user: serialize_user(user, profile), auth_token: auth_token, refresh_token: refresh_token}
+  def login(%{user: user, profile: profile, conversations: conversations, auth_token: auth_token, refresh_token: refresh_token}) do
+    %{user: serialize_user(user, profile, conversations), auth_token: auth_token, refresh_token: refresh_token}
   end
 
   def refresh_auth(%{refresh_token: refresh_token, auth_token: auth_token}) do
@@ -25,7 +25,7 @@ defmodule ChatApiWeb.AuthJSON do
     }
   end
 
-  def serialize_user(%User{} = user, %UserProfile{} = profile) do
+  def serialize_user(%User{} = user, %UserProfile{} = profile, conversations) do
     %{
       id: user.id,
       email: user.email,
@@ -33,7 +33,38 @@ defmodule ChatApiWeb.AuthJSON do
       display_name: user.display_name,
       hidden: profile.hidden,
       theme: profile.theme,
-      magnification: profile.magnification
+      magnification: profile.magnification,
+      conversations: serialize_conversations(conversations)
+    }
+  end
+
+  defp serialize_conversations(conversations) do
+    for conversation <- conversations do
+      serialize_conversation(conversation)
+    end
+  end
+
+  defp serialize_conversation(conversation) do
+    %{
+      id: conversation.id,
+      messages: serialize_messages(conversation.messages),
+      private: conversation.private,
+      alias: conversation.alias
+    }
+  end
+
+  defp serialize_messages(messages) do
+    for message <- messages do
+      serialize_message(message)
+    end
+  end
+
+  defp serialize_message(message) do
+    %{
+      sender: message.user_id,
+      content: message.content,
+      inserted_at: message.inserted_at,
+      updated_at: message.updated_at
     }
   end
 end

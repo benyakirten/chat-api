@@ -4,6 +4,7 @@ defmodule ChatApi.Account do
   TODO: Make sure everything fails spectacularly - error handler will take care of it
   """
 
+  alias ChatApi.Chat.Conversation
   alias ChatApi.{Repo, Token}
   alias ChatApi.Account.{User, UserToken, UserProfile, UserNotifier}
 
@@ -163,16 +164,27 @@ defmodule ChatApi.Account do
   and store the refresh token in the database.
   """
   @spec login(String.t(), String.t()) ::
-          {:ok, User.t(), UserProfile.t(), String.t(), String.t()}
-          | {:error, :invalid_credentials}
+          {:ok, User.t(), UserProfile.t(), [Conversation.t()], String.t(), String.t()}
+          | {:error, any}
   def login(email, password) do
-    with user when not is_nil(user) <- Repo.get_by(User, email: email),
-         true <- User.valid_password?(user.hashed_password, password),
-         profile when not is_nil(profile) <- Repo.get_by(UserProfile, user_id: user.id),
-         {auth_token, refresh_token, new_token_changeset} <- create_login_tokens(user),
-         {:ok, _} <- Repo.insert(new_token_changeset) do
-      {:ok, user, profile, auth_token, refresh_token}
-    else
+    transaction = Ecto.Multi.new()
+    |> Ecto.Multi.run(:user, fn _repo, _changes ->
+      with user <- Repo.one(User.user_by_email_query(email)),
+       true <- User.valid_password?(user.hashed_password, password) do
+        {:ok, user}
+       else
+        _ -> {:error, :invalid_credentials}
+       end
+    end)
+    |> Ecto.Multi.run(:conversations, fn _repo, %{user: user} ->
+      {:ok, Repo.all(Conversation.user_conversations_query(user.id))}
+    end)
+    |> multi_create_tokens()
+
+    case Repo.transaction(transaction) do
+      {:ok, %{user: user, tokens: {auth_token, refresh_token}, conversations: conversations}} ->
+        {:ok, user, user.profile, conversations, auth_token, refresh_token}
+      # TODO: Add parsing for errors
       _ -> {:error, :invalid_credentials}
     end
   end

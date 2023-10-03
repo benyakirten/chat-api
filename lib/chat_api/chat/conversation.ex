@@ -6,6 +6,11 @@ defmodule ChatApi.Chat.Conversation do
   import Ecto.Changeset
   import Ecto.Query
 
+  @type t :: %__MODULE__{
+    alias: String.t(),
+    private: :boolean
+  }
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "conversations" do

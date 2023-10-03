@@ -1,9 +1,10 @@
 defmodule ChatApi.Account.User do
   use Ecto.Schema
   import Ecto.Changeset
+  import Ecto.Query
 
   alias ChatApi.Chat.Message
-  alias ChatApi.Account.{UserProfile, UserToken}
+  alias ChatApi.Account.{UserProfile, UserToken, User}
 
   @type t :: %__MODULE__{
           email: String.t(),
@@ -18,12 +19,12 @@ defmodule ChatApi.Account.User do
   schema "users" do
     field(:email, :string)
     field(:password, :string, virtual: true, redact: true)
-    field(:hashed_password, :string, redact: true)
+    field(:hashed_password, :string)
     field(:confirmed_at, :naive_datetime)
     field(:display_name, :string)
 
-    has_many(:users_tokens, UserToken)
-    has_one(:user_profiles, UserProfile)
+    has_many(:tokens, UserToken)
+    has_one(:profile, UserProfile)
     has_many(:messages, Message)
 
     many_to_many(:conversations, ChatApi.Chat.Conversation, join_through: "users_conversations", on_replace: :delete)
@@ -51,6 +52,10 @@ defmodule ChatApi.Account.User do
     |> validate_length(:display_name, min: 3, max: 20)
     |> validate_email()
     |> validate_password()
+  end
+
+  def user_by_email_query(email) do
+    from(u in User, where: u.email == ^email, preload: [:profile])
   end
 
   @email_regex ~r<(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])>

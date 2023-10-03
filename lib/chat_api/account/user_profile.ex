@@ -42,4 +42,8 @@ defmodule ChatApi.Account.UserProfile do
       profile -> changeset(profile, attrs)
     end
   end
+
+  def profile_by_user_id_query(user_id) do
+    from(p in UserProfile, where: p.user_id == ^user_id)
+  end
 end
