@@ -1,8 +1,9 @@
 defmodule ChatApi.Chat.Conversation do
   alias ChatApi.Chat.{Message, Conversation}
   alias ChatApi.Account.User
-  alias ChatApi.Repo
+
   use Ecto.Schema
+
   import Ecto.Changeset
   import Ecto.Query
 
@@ -33,38 +34,12 @@ defmodule ChatApi.Chat.Conversation do
     from(c in Conversation, join: u in assoc(c, :users), where: u.id == ^user_id, preload: [messages: ^from(m in Message, order_by: [desc: m.inserted_at])])
   end
 
-  def new_conversation_query(user_ids, message_content, message_sender) do
-    Ecto.Multi.new()
-    |> Ecto.Multi.insert(:create_conversation, Conversation.changeset(%Conversation{}))
-    # Repo.preload gives errors in IEX - This is a temporary measure to preload the users
-    # While debugging the query
-    |> Ecto.Multi.run(:get_conversation, fn _repo, %{create_conversation: conversation} ->
-      convo = Repo.one(from(c in Conversation, where: c.id == ^conversation.id, preload: :users))
-      case convo do
-        nil -> {:error, :missing_conversation}
-        convo -> {:ok, convo}
-      end
-    end)
-    |> Ecto.Multi.run(:add_message, fn _repo, %{get_conversation: conversation} ->
-      %Message{}
-      |> Message.changeset(%{content: message_content, conversation_id: conversation.id, user_id: message_sender})
-      |> Repo.insert()
-    end)
-    |> Ecto.Multi.all(:get_users, from(u in User, where: u.id in ^user_ids, select: u))
-    |> Ecto.Multi.run(:apply_users, fn _repo, %{get_users: users, get_conversation: conversation} ->
-      conversation
-      |> changeset()
-      |> put_assoc(:users, users)
-      |> Repo.update()
-    end)
-  end
-
   def unique_users_for_conversations_query(conversations, current_user_id) do
     conversation_ids = for conversation <- conversations, do: conversation.id
     from(c in Conversation, join: u in assoc(c, :users), where: c.id in ^conversation_ids and u.id != ^current_user_id, distinct: u, select: u)
   end
 
-  def find_private_conversation_by_users(user_id1, user_id2) do
+  def find_private_conversation_by_users_query(user_id1, user_id2) do
     # The users_conversations table IDs is represented as the raw binaries,
     # not strings. So we need to convert the strings to
     # binaries because it is much easier than converting the binaries
