@@ -30,7 +30,7 @@ defmodule ChatApi.Chat.Conversation do
   end
 
   def user_conversations_query(user_id) do
-    from(c in Conversation, join: u in assoc(c, :users), where: u.id == ^user_id, preload: :messages)
+    from(c in Conversation, join: u in assoc(c, :users), where: u.id == ^user_id, preload: [messages: ^from(m in Message, order_by: [desc: m.inserted_at])])
   end
 
   def new_conversation_query(user_ids, message_content, message_sender) do
