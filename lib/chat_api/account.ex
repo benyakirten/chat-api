@@ -164,7 +164,7 @@ defmodule ChatApi.Account do
   and store the refresh token in the database.
   """
   @spec login(String.t(), String.t()) ::
-          {:ok, User.t(), UserProfile.t(), [Conversation.t()], String.t(), String.t()}
+          {:ok, User.t(), UserProfile.t(), [Conversation.t()], [User.t()], String.t(), String.t()}
           | {:error, any}
   def login(email, password) do
     transaction = Ecto.Multi.new()
@@ -179,12 +179,15 @@ defmodule ChatApi.Account do
     |> Ecto.Multi.run(:conversations, fn _repo, %{user: user} ->
       {:ok, Repo.all(Conversation.user_conversations_query(user.id))}
     end)
+    |> Ecto.Multi.run(:conversation_users, fn _repo, %{conversations: conversations, user: user} ->
+      unique_users = Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
+      {:ok, unique_users}
+    end)
     |> multi_create_tokens()
 
     case Repo.transaction(transaction) do
-      {:ok, %{user: user, tokens: {auth_token, refresh_token}, conversations: conversations}} ->
-        {:ok, user, user.profile, conversations, auth_token, refresh_token}
-      # TODO: Add parsing for errors
+      {:ok, %{user: user, tokens: {auth_token, refresh_token}, conversations: conversations, conversation_users: users}} ->
+        {:ok, user, user.profile, conversations, users, auth_token, refresh_token}
       _ -> {:error, :invalid_credentials}
     end
   end

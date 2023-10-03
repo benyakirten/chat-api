@@ -58,4 +58,9 @@ defmodule ChatApi.Chat.Conversation do
       |> Repo.update()
     end)
   end
+
+  def unique_users_for_conversations_query(conversations, current_user_id) do
+    conversation_ids = for conversation <- conversations, do: conversation.id
+    from(c in Conversation, join: u in assoc(c, :users), where: c.id in ^conversation_ids and u.id != ^current_user_id, distinct: u, select: u)
+  end
 end
