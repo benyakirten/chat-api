@@ -55,4 +55,14 @@ defmodule ChatApiWeb.UserSocket do
   # Returning `nil` makes this socket anonymous.
   @impl true
   def id(socket), do: "user_socket:#{socket.assigns.user_id}"
+
+  def authenticate?(socket, token) do
+    user_id = socket.assigns.user_id
+
+    with {:ok, parsed_id} <- Token.user_id_from_auth_token(token), true <- parsed_id == user_id do
+      true
+     else
+      _ -> false
+     end
+  end
 end

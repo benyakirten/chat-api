@@ -1,4 +1,5 @@
 defmodule ChatApiWeb.SystemChannel do
+  alias ChatApiWeb.UserSocket
   alias ChatApiWeb.Presence
   alias ChatApi.{Account, Token}
   use ChatApiWeb, :channel
@@ -7,16 +8,6 @@ defmodule ChatApiWeb.SystemChannel do
     online_at: inspect(System.system_time(:second))
   })
   defp remove_user_id_from_presence(socket), do: Presence.untrack(socket, socket.assigns.user_id)
-  defp authenticate(socket, token) do
-    user_id = socket.assigns.user_id
-    with {:ok, parsed_id} <- Token.user_id_from_auth_token(token), true <- parsed_id == user_id do
-      :ok
-     else
-      _ ->
-        :ok = ChatApiWeb.Endpoint.broadcast!("user_socket:" <> user_id, "disconnect", %{})
-        :error
-     end
-  end
 
   @impl true
   def join("system:general", params, socket) do
@@ -45,31 +36,37 @@ defmodule ChatApiWeb.SystemChannel do
 
   @impl true
   def handle_in("set_hidden", payload, socket) do
-    authenticate(socket, payload["token"])
-    send(self(), :update_hidden_state)
-
-    {:noreply, assign(socket, :hidden, payload["hidden"])}
+    if UserSocket.authenticate?(socket, payload["token"]) do
+      send(self(), :update_hidden_state)
+      {:noreply, assign(socket, :hidden, payload["hidden"])}
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
   end
 
   @impl true
   def handle_in("set_display_name", payload, socket) do
-    authenticate(socket, payload["token"])
-    display_name = payload["display_name"]
+    # TODO: Make this only one database transaction
+    if UserSocket.authenticate?(socket, payload["token"]) do
+      display_name = payload["display_name"]
 
-    with user when not is_nil(user) <- Account.get_user(socket.assigns.user_id) do
-      if user.display_name == display_name do
-        {:reply, {:error, :display_name_unchanged}, socket}
-      else
-        case Account.update_display_name(user, display_name) do
-          {:ok, updated_user} ->
-            broadcast!(socket, "update_display_name", %{
-              user_id: socket.assigns.user_id,
-              display_name: updated_user.display_name
-            })
-            {:noreply, socket}
-          error -> {:reply, {:error, error}, socket}
+      with user when not is_nil(user) <- Account.get_user(socket.assigns.user_id) do
+        if user.display_name == display_name do
+          {:reply, {:error, :display_name_unchanged}, socket}
+        else
+          case Account.update_display_name(user, display_name) do
+            {:ok, updated_user} ->
+              broadcast!(socket, "update_display_name", %{
+                user_id: socket.assigns.user_id,
+                display_name: updated_user.display_name
+              })
+              {:noreply, socket}
+            error -> {:reply, {:error, error}, socket}
+          end
         end
       end
+    else
+      {:reply, {:error, :invalid_token}, socket}
     end
   end
 end
