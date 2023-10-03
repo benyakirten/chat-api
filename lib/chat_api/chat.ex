@@ -202,4 +202,15 @@ defmodule ChatApi.Chat do
   def change_message(%Message{} = message, attrs \\ %{}) do
     Message.changeset(message, attrs)
   end
+
+  def update_message(message_id, user_id, content) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.one(:verify_sender, Message.message_sender_query(message_id, user_id))
+    |> Ecto.Multi.run(:update_message, fn _repo, %{verify_sender: message} ->
+      message
+      |> Message.changeset(%{content: content})
+      |> Repo.update()
+    end)
+    |> Repo.transaction()
+  end
 end

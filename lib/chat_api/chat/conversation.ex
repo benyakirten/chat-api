@@ -93,4 +93,8 @@ defmodule ChatApi.Chat.Conversation do
       {:error, :invalid_user_ids}
     end
   end
+
+  def member_of_conversation_query(conversation_id, user_id) do
+    from(c in Conversation, join: u in assoc(c, :users), where: c.id == ^conversation_id and u.id == ^user_id)
+  end
 end
