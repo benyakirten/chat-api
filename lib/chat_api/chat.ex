@@ -162,4 +162,27 @@ defmodule ChatApi.Chat do
         {:ok, preloaded_conversation, users, messages}
     end
   end
+
+  def leave_conversation(conversation_id, user_id) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:get_conversation, fn _repo, _changes ->
+      case Repo.one(Conversation.get_user_group_conversation_query(conversation_id, user_id)) do
+        nil -> {:error, :no_conversation}
+        conversation -> {:ok, conversation}
+      end
+    end)
+    |> Ecto.Multi.run(:remove_conversation, fn _repo, %{get_conversation: conversation} ->
+      query = if length(conversation.users) > 1 do
+        Conversation.get_users_conversations_query(conversation.id, user_id)
+      else
+        Conversation.get_conversation(conversation.id)
+      end
+
+      case Repo.delete_all(query) do
+        {0, _} -> {:error, :no_conversation}
+        _ -> {:ok, :conversation_deleted}
+      end
+    end)
+    |> Repo.transaction()
+  end
 end

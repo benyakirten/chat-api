@@ -39,16 +39,20 @@ defmodule ChatApi.Chat.Conversation do
     from(c in Conversation, join: u in assoc(c, :users), where: c.id in ^conversation_ids and u.id != ^current_user_id, distinct: u, select: u)
   end
 
+  defp convert_uuids_to_binary(uuids) do
+    uuids
+    |> Stream.map(&Ecto.UUID.dump/1)
+    |> Stream.filter(fn result -> result != :error end)
+    |> Stream.map(fn {:ok, uuid} -> uuid end)
+    |> Enum.to_list()
+  end
+
   def find_private_conversation_by_users_query(user_id1, user_id2) do
     # The users_conversations table IDs is represented as the raw binaries,
     # not strings. So we need to convert the strings to
     # binaries because it is much easier than converting the binaries
     # to strings inside of the clause
-    user_ids = [user_id1, user_id2]
-    |> Stream.map(&Ecto.UUID.dump/1)
-    |> Stream.filter(fn result -> result != :error end)
-    |> Stream.map(fn {:ok, uuid} -> uuid end)
-    |> Enum.to_list()
+    user_ids = convert_uuids_to_binary([user_id1, user_id2])
 
     if length(user_ids) == 2 do
       from(
@@ -75,5 +79,18 @@ defmodule ChatApi.Chat.Conversation do
 
   def conversation_with_preloads_query(conversation_id) do
     from(c in Conversation, where: c.id == ^conversation_id, preload: [:users, :messages])
+  end
+
+  def get_user_group_conversation_query(user_id, conversation_id) do
+    from(c in Conversation, join: u in assoc(c, :users), where: c.private == ^false and c.id == ^conversation_id and u.id == ^user_id, preload: :users)
+  end
+
+  def get_conversation(conversation_id) do
+    from(c in Conversation, where: c.id == ^conversation_id)
+  end
+
+  def get_users_conversations_query(conversation_id, user_id) do
+    [conversation_binary_id, user_binary_id] = convert_uuids_to_binary(([conversation_id, user_id]))
+    from(uc in "users_conversations", where: uc.conversation_id == ^conversation_binary_id and uc.user_id == ^user_binary_id)
   end
 end
