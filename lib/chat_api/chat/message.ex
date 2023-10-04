@@ -26,4 +26,11 @@ defmodule ChatApi.Chat.Message do
   def message_by_sender_query(message_id, user_id) do
     from(m in Message, where: m.id == ^message_id and m.user_id == ^user_id)
   end
+
+  def serialize(message) do
+    %{
+      content: message.content,
+      sender: message.user_id
+    }
+  end
 end

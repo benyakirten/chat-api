@@ -128,7 +128,7 @@ defmodule ChatApi.Chat do
     send_conversation_message(conversation_id, message_sender, message_content)
     |> Ecto.Multi.one(:preload_conversation, (Conversation.conversation_with_preloads_query(conversation_id)))
     |> Repo.transaction()
-    |> get_conversation_users_and_messages_from_multi_results()
+    |> get_conversation_users_from_multi_results()
   end
 
   defp start_new_private_chat(user_ids, first_message_content, first_message_sender) do
@@ -140,7 +140,7 @@ defmodule ChatApi.Chat do
       end
     end)
     |> Repo.transaction()
-    |> get_conversation_users_and_messages_from_multi_results()
+    |> get_conversation_users_from_multi_results()
   end
 
   defp start_group_chat(user_ids, first_message_content, first_message_sender, conversation_alias) do
@@ -149,17 +149,16 @@ defmodule ChatApi.Chat do
       {:ok, Repo.one!(Conversation.conversation_with_preloads_query(conversation.id))}
     end)
     |> Repo.transaction()
-    |> get_conversation_users_and_messages_from_multi_results()
+    |> get_conversation_users_from_multi_results()
   end
 
-  defp get_conversation_users_and_messages_from_multi_results(multi_results) do
+  defp get_conversation_users_from_multi_results(multi_results) do
     case multi_results do
       {:error, error} -> {:error, error}
       {:ok, queries} ->
         preloaded_conversation = queries[:preload_conversation]
         users = preloaded_conversation.users
-        messages = preloaded_conversation.messages
-        {:ok, preloaded_conversation, users, messages}
+        {:ok, preloaded_conversation, users}
     end
   end
 

@@ -78,7 +78,7 @@ defmodule ChatApi.Chat.Conversation do
   end
 
   def conversation_with_preloads_query(conversation_id) do
-    from(c in Conversation, where: c.id == ^conversation_id, preload: [:users, :messages])
+    from(c in Conversation, where: c.id == ^conversation_id, preload: [:users])
   end
 
   def get_user_group_conversation_query(conversation_id, user_id) do
