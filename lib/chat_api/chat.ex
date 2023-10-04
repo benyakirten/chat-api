@@ -166,6 +166,8 @@ defmodule ChatApi.Chat do
   def leave_conversation(conversation_id, user_id) do
     Ecto.Multi.new()
     |> Ecto.Multi.run(:get_conversation, fn _repo, _changes ->
+      res = Repo.one(Conversation.get_user_group_conversation_query(conversation_id, user_id))
+      IO.inspect(res)
       case Repo.one(Conversation.get_user_group_conversation_query(conversation_id, user_id)) do
         nil -> {:error, :no_conversation}
         conversation -> {:ok, conversation}
@@ -180,7 +182,7 @@ defmodule ChatApi.Chat do
 
       case Repo.delete_all(query) do
         {0, _} -> {:error, :no_conversation}
-        _ -> {:ok, :conversation_deleted}
+        _ -> {:ok, :success}
       end
     end)
     |> Repo.transaction()
