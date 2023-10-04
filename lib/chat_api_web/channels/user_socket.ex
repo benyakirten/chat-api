@@ -12,6 +12,8 @@ defmodule ChatApiWeb.UserSocket do
   # pointing to the `ChatApiWeb.RoomChannel`:
   #
   channel "system:*", ChatApiWeb.SystemChannel
+  channel "private:*", ChatApiWeb.PrivateChannel
+  channel "group:*", ChatApiWeb.GroupChannel
   #
   # To create a channel file, use the mix task:
   #

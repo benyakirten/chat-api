@@ -72,4 +72,8 @@ defmodule ChatApi.Chat.Conversation do
   def member_of_conversation_query(conversation_id, user_id) do
     from(c in Conversation, join: u in assoc(c, :users), where: c.id == ^conversation_id and u.id == ^user_id)
   end
+
+  def conversation_with_preloads_query(conversation_id) do
+    from(c in Conversation, where: c.id == ^conversation_id, preload: [:users, :messages])
+  end
 end

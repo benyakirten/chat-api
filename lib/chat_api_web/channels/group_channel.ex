@@ -1,8 +1,8 @@
-defmodule ChatApiWeb.ConversationChannel do
+defmodule ChatApiWeb.GroupChannel do
   use ChatApiWeb, :channel
 
   @impl true
-  def join("conversation:lobby", payload, socket) do
+  def join("group:" <> conversation_id, payload, socket) do
     if authorized?(payload) do
       {:ok, socket}
     else

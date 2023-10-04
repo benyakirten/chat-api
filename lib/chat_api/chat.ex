@@ -34,9 +34,11 @@ defmodule ChatApi.Chat do
         convo -> {:ok, convo}
       end
     end)
-    |> Ecto.Multi.run(:add_message, fn _repo, %{get_conversation: conversation} ->
+    |> return_error_on_no_results(:get_sender, User.user_by_id_query(message_sender), :user_not_found)
+    |> Ecto.Multi.run(:add_message, fn _repo, %{get_conversation: conversation, get_sender: user} ->
       %Message{}
-      |> Message.changeset(%{content: message_content, user_id: message_sender})
+      |> Message.changeset(%{content: message_content})
+      |> Ecto.Changeset.put_assoc(:user, user)
       |> Ecto.Changeset.put_assoc(:conversation, conversation)
       |> Repo.insert()
     end)
@@ -47,7 +49,6 @@ defmodule ChatApi.Chat do
       |> Ecto.Changeset.put_assoc(:users, users)
       |> Repo.update()
     end)
-    |> Repo.transaction()
   end
 
   def update_message(message_id, user_id, content) do
@@ -58,7 +59,6 @@ defmodule ChatApi.Chat do
       |> Message.changeset(%{content: content})
       |> Repo.update()
     end)
-    |> Repo.transaction()
   end
 
   def delete_message(message_id, user_id) do
@@ -66,6 +66,11 @@ defmodule ChatApi.Chat do
   end
 
   def send_message(conversation_id, user_id, content) do
+    send_conversation_message(conversation_id, user_id, content)
+    |> Repo.transaction()
+  end
+
+  defp send_conversation_message(conversation_id, user_id, content) do
     # Verify that the conversation exists and has the user
     Ecto.Multi.new()
     |> return_error_on_no_results(
@@ -81,7 +86,6 @@ defmodule ChatApi.Chat do
       |> Ecto.Changeset.put_assoc(:conversation, conversation)
       |> Repo.insert()
     end)
-    |> Repo.transaction()
   end
 
   # Ecto.Multi.one does not return {:ok, val} or {:error, :reason}, just nil or the value
@@ -99,7 +103,7 @@ defmodule ChatApi.Chat do
     user_ids = if first_message_sender not in user_ids, do: Enum.concat(user_ids, [first_message_sender]), else: user_ids
     if private,
       do: start_private_chat(user_ids, first_message_content, first_message_sender),
-      else: new_conversation(user_ids, first_message_content, first_message_sender, false, conversation_alias)
+      else: start_group_chat(user_ids, first_message_content, first_message_sender, conversation_alias)
   end
 
   defp start_private_chat(user_ids, first_message_content, first_message_sender) do
@@ -111,10 +115,51 @@ defmodule ChatApi.Chat do
         {:error, :invalid_user_ids} -> {:error, :invalid_user_ids}
         query ->
           conversation = Repo.one(query)
-          if conversation,
-            do: send_message(conversation.id, first_message_sender, first_message_content),
-            else: new_conversation(user_ids, first_message_content, first_message_sender, true)
+          if conversation do
+            use_preexisting_private_conversation(conversation.id, first_message_sender, first_message_content)
+          else
+            start_new_private_chat(user_ids, first_message_content, first_message_sender)
+          end
       end
+    end
+  end
+
+  defp use_preexisting_private_conversation(conversation_id, message_sender, message_content) do
+    send_conversation_message(conversation_id, message_sender, message_content)
+    |> Ecto.Multi.one(:preload_conversation, (Conversation.conversation_with_preloads_query(conversation_id)))
+    |> Repo.transaction()
+    |> get_conversation_users_and_messages_from_multi_results()
+  end
+
+  defp start_new_private_chat(user_ids, first_message_content, first_message_sender) do
+    new_conversation(user_ids, first_message_content, first_message_sender, true)
+    |> Ecto.Multi.run(:preload_conversation, fn _repo, %{get_conversation: conversation} ->
+      case Repo.one(Conversation.conversation_with_preloads_query(conversation.id)) do
+        nil -> {:error, :conversation_not_found}
+        conversation -> {:ok, conversation}
+      end
+    end)
+    |> Repo.transaction()
+    |> get_conversation_users_and_messages_from_multi_results()
+  end
+
+  defp start_group_chat(user_ids, first_message_content, first_message_sender, conversation_alias) do
+    new_conversation(user_ids, first_message_content, first_message_sender, false, conversation_alias)
+    |> Ecto.Multi.run(:preload_conversation, fn _repo, %{get_conversation: conversation} ->
+      {:ok, Repo.one!(Conversation.conversation_with_preloads_query(conversation.id))}
+    end)
+    |> Repo.transaction()
+    |> get_conversation_users_and_messages_from_multi_results()
+  end
+
+  defp get_conversation_users_and_messages_from_multi_results(multi_results) do
+    case multi_results do
+      {:error, error} -> {:error, error}
+      {:ok, queries} ->
+        preloaded_conversation = queries[:preload_conversation]
+        users = preloaded_conversation.users
+        messages = preloaded_conversation.messages
+        {:ok, preloaded_conversation, users, messages}
     end
   end
 end

@@ -1,7 +1,7 @@
 defmodule ChatApiWeb.SystemChannel do
   alias ChatApiWeb.UserSocket
   alias ChatApiWeb.Presence
-  alias ChatApi.{Account, Token}
+  alias ChatApi.Account
   use ChatApiWeb, :channel
 
   defp add_user_id_to_presence(socket), do: Presence.track(socket, socket.assigns.user_id, %{
@@ -11,8 +11,12 @@ defmodule ChatApiWeb.SystemChannel do
 
   @impl true
   def join("system:general", params, socket) do
-    send(self(), :track_user)
-    {:ok, assign(socket, :hidden, params["hidden"] || false)}
+    if UserSocket.authenticate?(socket, params["token"]) do
+      send(self(), :track_user)
+      {:ok, assign(socket, :hidden, params["hidden"] || false)}
+    else
+      {:error, %{reason: "Invalid Token"}}
+    end
   end
 
   @impl true
@@ -68,5 +72,9 @@ defmodule ChatApiWeb.SystemChannel do
     else
       {:reply, {:error, :invalid_token}, socket}
     end
+  end
+
+  def handle_in("start_conversation", payload, socket) do
+    #
   end
 end
