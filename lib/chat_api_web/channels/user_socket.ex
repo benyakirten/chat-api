@@ -28,4 +28,12 @@ defmodule ChatApiWeb.UserSocket do
       _ -> false
      end
   end
+
+  def get_conversation_data(socket, token, conversation_id) do
+    if authorized?(socket, token) do
+      ChatApi.Chat.get_conversation_details(conversation_id, socket.assigns.user_id)
+    else
+      {:error, :unauthorized}
+    end
+  end
 end

@@ -1,12 +1,21 @@
-defmodule ChatApiWeb.GroupChannel do
+defmodule ChatApiWeb.ConversationChannel do
   use ChatApiWeb, :channel
+
+  alias ChatApi.Chat.{Conversation, Message}
+  alias ChatApi.Account.User
+  alias ChatApiWeb.UserSocket
 
   @impl true
   def join("group:" <> conversation_id, payload, socket) do
-    if authorized?(payload) do
-      {:ok, socket}
-    else
-      {:error, %{reason: "unauthorized"}}
+    case UserSocket.get_conversation_data(socket, payload["token"], conversation_id) do
+      {:error, reason} -> {:error, reason}
+      {:ok, conversation} ->
+        data = %{
+          "conversation" => Conversation.serialize_conversation(conversation),
+          "users" => User.serialize_users(conversation.users),
+          "messages" => Message.serialize_messages(conversation.messages)
+        }
+        {:ok, data, socket}
     end
   end
 
@@ -23,10 +32,5 @@ defmodule ChatApiWeb.GroupChannel do
   def handle_in("shout", payload, socket) do
     broadcast(socket, "shout", payload)
     {:noreply, socket}
-  end
-
-  # Add authorization logic here as required.
-  defp authorized?(_payload) do
-    true
   end
 end

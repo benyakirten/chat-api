@@ -44,6 +44,7 @@ defmodule ChatApi.Chat do
     end)
     |> Ecto.Multi.all(:get_users, from(u in User, where: u.id in ^user_ids, select: u))
     |> Ecto.Multi.run(:apply_users, fn _repo, %{get_users: users, get_conversation: conversation} ->
+      # Make sure all the user ids correspond to users
       if length(users) == length(user_ids) do
         conversation
         |> Conversation.changeset()
@@ -179,6 +180,13 @@ defmodule ChatApi.Chat do
     case Repo.transaction(transaction) do
       {:error, _error_atom, error, _changesets} -> {:error, error}
       {:ok, _} -> :ok
+    end
+  end
+
+  def get_conversation_details(conversation_id, user_id) do
+    case Repo.one(Conversation.get_user_conversation_with_details_query(conversation_id, user_id)) do
+      nil -> {:error, :no_conversation}
+      conversation -> {:ok, conversation}
     end
   end
 end

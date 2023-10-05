@@ -32,12 +32,17 @@ defmodule ChatApi.Chat.Conversation do
   end
 
   def user_conversations_query(user_id) do
-    from(c in Conversation, join: u in assoc(c, :users), where: u.id == ^user_id, preload: [messages: ^from(m in Message, order_by: [desc: m.inserted_at])])
+    from(c in Conversation, join: u in assoc(c, :users), where: u.id == ^user_id)
   end
 
   def unique_users_for_conversations_query(conversations, current_user_id) do
     conversation_ids = for conversation <- conversations, do: conversation.id
-    from(c in Conversation, join: u in assoc(c, :users), where: c.id in ^conversation_ids and u.id != ^current_user_id, distinct: u, select: u)
+    from(
+      c in Conversation,
+      join: u in assoc(c, :users),
+      where: c.id in ^conversation_ids and u.id != ^current_user_id,
+      distinct: u, select: u
+    )
   end
 
   defp convert_uuids_to_binary(uuids) do
@@ -101,5 +106,31 @@ defmodule ChatApi.Chat.Conversation do
   def get_users_conversations_query(conversation_id, user_id) do
     [conversation_binary_id, user_binary_id] = convert_uuids_to_binary(([conversation_id, user_id]))
     from(uc in "users_conversations", where: uc.conversation_id == ^conversation_binary_id and uc.user_id == ^user_binary_id)
+  end
+
+  def get_user_conversation_with_details_query(conversation_id, user_id) do
+    from(
+      c in Conversation,
+      join: u in assoc(c, :users),
+      where: c.id == ^conversation_id and u.id == ^user_id,
+      preload: [
+        :users,
+        messages: ^from(m in Message, order_by: [desc: m.inserted_at])
+      ]
+    )
+  end
+
+  def serialize_conversations(conversations) do
+    for conversation <- conversations do
+      serialize_conversation(conversation)
+    end
+  end
+
+  def serialize_conversation(conversation) do
+    %{
+      id: conversation.id,
+      private: conversation.private,
+      alias: conversation.alias
+    }
   end
 end

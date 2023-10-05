@@ -80,7 +80,17 @@ defmodule ChatApiWeb.SystemChannel do
       case ChatApi.Chat.start_conversation(user_ids, private, first_message_content, socket.assigns.user_id, conversation_alias) do
         {:error, reason} -> {:reply, {:error, reason}, socket}
         {:ok, conversation} ->
-          for user_id <- user_ids, do: ChatApiWeb.Endpoint.broadcast("user:#{user_id}", "new_conversation", %{"conversation_id" => conversation.id})
+          for user_id <- user_ids do
+            ChatApiWeb.Endpoint.broadcast(
+              "user:#{user_id}",
+              "new_conversation",
+              %{
+                "conversation_id" => conversation.id,
+                "private" => conversation.private,
+                "alias" => conversation.alias
+              }
+            )
+          end
           {:noreply, socket}
       end
     else
