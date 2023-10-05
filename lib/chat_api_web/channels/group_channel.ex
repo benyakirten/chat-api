@@ -1,25 +1,11 @@
 defmodule ChatApiWeb.ConversationChannel do
   use ChatApiWeb, :channel
 
-  alias ChatApi.Chat.{Conversation, Message}
-  alias ChatApi.Account.User
   alias ChatApiWeb.UserSocket
 
   @impl true
   def join("group:" <> conversation_id, payload, socket) do
-    case UserSocket.get_conversation_data(socket, payload["token"], conversation_id) do
-      {:error, reason} ->
-        {:error, reason}
-
-      {:ok, conversation} ->
-        data = %{
-          "conversation" => Conversation.serialize(conversation),
-          "users" => User.serialize(conversation.users),
-          "messages" => Message.serialize(conversation.messages)
-        }
-
-        {:ok, data, socket}
-    end
+    UserSocket.handle_conversation_channel_join(conversation_id, payload, socket)
   end
 
   # Channels can be used in a request/response fashion

@@ -1,13 +1,11 @@
 defmodule ChatApiWeb.PrivateChannel do
   use ChatApiWeb, :channel
 
+  alias ChatApiWeb.UserSocket
+
   @impl true
   def join("private:" <> conversation_id, payload, socket) do
-    if authorized?(payload) do
-      {:ok, socket}
-    else
-      {:error, %{reason: "unauthorized"}}
-    end
+    UserSocket.handle_conversation_channel_join(conversation_id, payload, socket)
   end
 
   # Channels can be used in a request/response fashion
@@ -23,10 +21,5 @@ defmodule ChatApiWeb.PrivateChannel do
   def handle_in("shout", payload, socket) do
     broadcast(socket, "shout", payload)
     {:noreply, socket}
-  end
-
-  # Add authorization logic here as required.
-  defp authorized?(_payload) do
-    true
   end
 end

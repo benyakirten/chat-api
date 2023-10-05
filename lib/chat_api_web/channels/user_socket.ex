@@ -2,6 +2,9 @@ defmodule ChatApiWeb.UserSocket do
   alias ChatApi.Token
   use Phoenix.Socket
 
+  alias ChatApi.Chat.{Conversation, Message}
+  alias ChatApi.Account.User
+
   channel "system:*", ChatApiWeb.SystemChannel
   channel "private:*", ChatApiWeb.PrivateChannel
   channel "group:*", ChatApiWeb.GroupChannel
@@ -24,16 +27,32 @@ defmodule ChatApiWeb.UserSocket do
 
     with {:ok, parsed_id} <- Token.user_id_from_auth_token(token), true <- parsed_id == user_id do
       true
-     else
+    else
       _ -> false
-     end
+    end
   end
 
-  def get_conversation_data(socket, token, conversation_id) do
+  defp get_conversation_data(socket, token, conversation_id) do
     if authorized?(socket, token) do
       ChatApi.Chat.get_conversation_details(conversation_id, socket.assigns.user_id)
     else
       {:error, :unauthorized}
+    end
+  end
+
+  def handle_conversation_channel_join(conversation_id, payload, socket) do
+    case get_conversation_data(socket, payload["token"], conversation_id) do
+      {:error, reason} ->
+        {:error, reason}
+
+      {:ok, conversation} ->
+        data = %{
+          "conversation" => Conversation.serialize(conversation),
+          "users" => User.serialize(conversation.users),
+          "messages" => Message.serialize(conversation.messages)
+        }
+
+        {:ok, data, socket}
     end
   end
 end
