@@ -3,16 +3,14 @@ defmodule ChatApiWeb.UserChannel do
   use ChatApiWeb, :channel
 
   @impl true
-  def join("user:" <> _id, payload, socket) do
-    if UserSocket.authorized?(socket, payload["token"]) do
+  def join("user:" <> id, payload, socket) do
+    if UserSocket.authorized?(socket, payload["token"]) and id == socket.assigns.user_id do
       {:ok, socket}
     else
       {:error, %{reason: "unauthorized"}}
     end
   end
 
-  # It is also common to receive messages from the client and
-  # broadcast to everyone in the current topic (user:lobby).
   @impl true
   def handle_in("new_conversation", payload, socket) do
     {:reply, payload, socket}
