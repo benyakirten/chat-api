@@ -11,7 +11,7 @@ defmodule ChatApiWeb.SystemChannel do
 
   @impl true
   def join("system:general", params, socket) do
-    if UserSocket.authenticate?(socket, params["token"]) do
+    if UserSocket.authorized?(socket, params["token"]) do
       send(self(), :track_user)
       {:ok, assign(socket, :hidden, params["hidden"] || false)}
     else
@@ -40,7 +40,7 @@ defmodule ChatApiWeb.SystemChannel do
 
   @impl true
   def handle_in("set_hidden", payload, socket) do
-    if UserSocket.authenticate?(socket, payload["token"]) do
+    if UserSocket.authorized?(socket, payload["token"]) do
       send(self(), :update_hidden_state)
       {:noreply, assign(socket, :hidden, payload["hidden"])}
     else
@@ -51,7 +51,7 @@ defmodule ChatApiWeb.SystemChannel do
   @impl true
   def handle_in("set_display_name", payload, socket) do
     # TODO: Make this only one database transaction
-    if UserSocket.authenticate?(socket, payload["token"]) do
+    if UserSocket.authorized?(socket, payload["token"]) do
       display_name = payload["display_name"]
 
       with user when not is_nil(user) <- Account.get_user(socket.assigns.user_id) do
@@ -75,6 +75,12 @@ defmodule ChatApiWeb.SystemChannel do
   end
 
   def handle_in("start_conversation", payload, socket) do
-    #
+    if UserSocket.authorized?(socket, payload["token"]) do
+      # TODO: Actually call the ChatApi.Chat functions
+      ChatApiWeb.Endpoint.broadcast("user:#{socket.assigns.user_id}", "new_conversation", %{"this" => "works?"})
+      {:noreply, socket}
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
   end
 end
