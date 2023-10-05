@@ -3,7 +3,7 @@ defmodule ChatApiWeb.ConversationChannel do
 
   alias ChatApiWeb.UserSocket
   alias ChatApi.Chat
-  alias ChatApi.Chat.{Conversation, Message}
+  alias ChatApi.Serializer
 
   @impl true
   def join("group:" <> conversation_id, payload, socket) do
@@ -21,7 +21,7 @@ defmodule ChatApiWeb.ConversationChannel do
 
         {:ok, conversation} ->
           broadcast!(socket, "update_conversation_name", %{
-            "conversation" => Conversation.serialize(conversation)
+            "conversation" => Serializer.serialize(conversation)
           })
 
           {:noreply, socket}
@@ -41,7 +41,7 @@ defmodule ChatApiWeb.ConversationChannel do
           {:reply, {:error, error}, socket}
 
         {:ok, message} ->
-          broadcast!(socket, "new_message", %{"message" => Message.serialize(message)})
+          broadcast!(socket, "new_message", %{"message" => Serializer.serialize(message)})
       end
     else
       {:reply, {:error, :invalid_token}, socket}

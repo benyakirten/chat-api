@@ -133,20 +133,4 @@ defmodule ChatApi.Chat.Conversation do
       ]
     )
   end
-
-  def serialize([%Conversation{} = head | tail]) do
-    [serialize(head) | serialize(tail)]
-  end
-
-  def serialize(%Conversation{} = conversation) do
-    %{
-      id: conversation.id,
-      private: conversation.private,
-      alias: conversation.alias
-    }
-  end
-
-  def serialize([]) do
-    []
-  end
 end

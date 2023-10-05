@@ -1,10 +1,8 @@
 defmodule ChatApiWeb.UserSocket do
+  alias ChatApi.Serializer
   alias ChatApi.Token
-  use Phoenix.Socket
-
   alias ChatApi.Chat
-  alias ChatApi.Chat.{Conversation, Message}
-  alias ChatApi.Account.User
+  use Phoenix.Socket
 
   channel "system:*", ChatApiWeb.SystemChannel
   channel "private:*", ChatApiWeb.PrivateChannel
@@ -52,9 +50,9 @@ defmodule ChatApiWeb.UserSocket do
 
       {:ok, conversation} ->
         data = %{
-          "conversation" => Conversation.serialize(conversation),
-          "users" => User.serialize(conversation.users),
-          "messages" => Message.serialize(conversation.messages)
+          "conversation" => Serializer.serialize(conversation),
+          "users" => Serializer.serialize(conversation.users),
+          "messages" => Serializer.serialize(conversation.messages)
         }
 
         {:ok, data, assign(socket, :conversation_id, conversation_id)}
