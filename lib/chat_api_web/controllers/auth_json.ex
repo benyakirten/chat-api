@@ -2,11 +2,18 @@ defmodule ChatApiWeb.AuthJSON do
   alias ChatApi.Chat.Conversation
   alias ChatApi.Account.User
 
-  def login(%{user: user, profile: profile, conversations: conversations, users: users, auth_token: auth_token, refresh_token: refresh_token}) do
+  def login(%{
+        user: user,
+        profile: profile,
+        conversations: conversations,
+        users: users,
+        auth_token: auth_token,
+        refresh_token: refresh_token
+      }) do
     %{
-      user: User.serialize_user(user, profile),
-      conversations: Conversation.serialize_conversations(conversations),
-      users: User.serialize_users(users),
+      user: User.serialize(user, profile),
+      conversations: Conversation.serialize(conversations),
+      users: User.serialize(users),
       auth_token: auth_token,
       refresh_token: refresh_token
     }
@@ -21,6 +28,6 @@ defmodule ChatApiWeb.AuthJSON do
   end
 
   def confirm_token(%{user: user}) do
-    %{success: true, user: User.serialize_user(user)}
+    %{success: true, user: User.serialize(user)}
   end
 end

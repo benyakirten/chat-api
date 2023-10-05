@@ -8,13 +8,16 @@ defmodule ChatApiWeb.ConversationChannel do
   @impl true
   def join("group:" <> conversation_id, payload, socket) do
     case UserSocket.get_conversation_data(socket, payload["token"], conversation_id) do
-      {:error, reason} -> {:error, reason}
+      {:error, reason} ->
+        {:error, reason}
+
       {:ok, conversation} ->
         data = %{
-          "conversation" => Conversation.serialize_conversation(conversation),
-          "users" => User.serialize_users(conversation.users),
-          "messages" => Message.serialize_messages(conversation.messages)
+          "conversation" => Conversation.serialize(conversation),
+          "users" => User.serialize(conversation.users),
+          "messages" => Message.serialize(conversation.messages)
         }
+
         {:ok, data, socket}
     end
   end

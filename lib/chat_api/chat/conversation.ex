@@ -9,9 +9,9 @@ defmodule ChatApi.Chat.Conversation do
   import Ecto.Query
 
   @type t :: %__MODULE__{
-    alias: String.t(),
-    private: :boolean
-  }
+          alias: String.t(),
+          private: :boolean
+        }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -37,11 +37,13 @@ defmodule ChatApi.Chat.Conversation do
 
   def unique_users_for_conversations_query(conversations, current_user_id) do
     conversation_ids = for conversation <- conversations, do: conversation.id
+
     from(
       c in Conversation,
       join: u in assoc(c, :users),
       where: c.id in ^conversation_ids and u.id != ^current_user_id,
-      distinct: u, select: u
+      distinct: u,
+      select: u
     )
   end
 
@@ -65,6 +67,7 @@ defmodule ChatApi.Chat.Conversation do
       |> Ecto.Multi.run(:get_users, fn _repo, _changes ->
         ids = [user_id1, user_id2]
         query = from(u in User, where: u.id in ^ids)
+
         case Repo.all(query) do
           users when length(users) < 2 -> {:error, :invalid_ids}
           users -> {:ok, users}
@@ -73,18 +76,19 @@ defmodule ChatApi.Chat.Conversation do
       |> Ecto.Multi.one(
         :get_conversation,
         from(
-            c in Conversation,
-            where: c.private == true,
-            join: uc in subquery(
+          c in Conversation,
+          where: c.private == true,
+          join:
+            uc in subquery(
               from uc in "users_conversations",
-              where: uc.user_id in ^user_ids,
-              group_by: uc.conversation_id,
-              select: uc.conversation_id,
-              having: count(uc.user_id) == ^length(user_ids)
+                where: uc.user_id in ^user_ids,
+                group_by: uc.conversation_id,
+                select: uc.conversation_id,
+                having: count(uc.user_id) == ^length(user_ids)
             ),
-            on: c.id == uc.conversation_id,
-            group_by: c.id
-          )
+          on: c.id == uc.conversation_id,
+          group_by: c.id
+        )
       )
     else
       {:error, :invalid_user_ids}
@@ -92,11 +96,18 @@ defmodule ChatApi.Chat.Conversation do
   end
 
   def member_of_conversation_query(conversation_id, user_id) do
-    from(c in Conversation, join: u in assoc(c, :users), where: c.id == ^conversation_id and u.id == ^user_id)
+    from(c in Conversation,
+      join: u in assoc(c, :users),
+      where: c.id == ^conversation_id and u.id == ^user_id
+    )
   end
 
   def get_user_group_conversation_query(conversation_id, user_id) do
-    from(c in Conversation, join: u in assoc(c, :users), where: c.private == ^false and c.id == ^conversation_id and u.id == ^user_id, preload: :users)
+    from(c in Conversation,
+      join: u in assoc(c, :users),
+      where: c.private == ^false and c.id == ^conversation_id and u.id == ^user_id,
+      preload: :users
+    )
   end
 
   def get_conversation(conversation_id) do
@@ -104,8 +115,11 @@ defmodule ChatApi.Chat.Conversation do
   end
 
   def get_users_conversations_query(conversation_id, user_id) do
-    [conversation_binary_id, user_binary_id] = convert_uuids_to_binary(([conversation_id, user_id]))
-    from(uc in "users_conversations", where: uc.conversation_id == ^conversation_binary_id and uc.user_id == ^user_binary_id)
+    [conversation_binary_id, user_binary_id] = convert_uuids_to_binary([conversation_id, user_id])
+
+    from(uc in "users_conversations",
+      where: uc.conversation_id == ^conversation_binary_id and uc.user_id == ^user_binary_id
+    )
   end
 
   def get_user_conversation_with_details_query(conversation_id, user_id) do
@@ -120,17 +134,21 @@ defmodule ChatApi.Chat.Conversation do
     )
   end
 
-  def serialize_conversations(conversations) do
+  def serialize([%Conversation{} | _] = conversations) do
     for conversation <- conversations do
-      serialize_conversation(conversation)
+      serialize(conversation)
     end
   end
 
-  def serialize_conversation(conversation) do
+  def serialize(%Conversation{} = conversation) do
     %{
       id: conversation.id,
       private: conversation.private,
       alias: conversation.alias
     }
+  end
+
+  def serialize([]) do
+    []
   end
 end

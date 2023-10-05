@@ -27,7 +27,10 @@ defmodule ChatApi.Account.User do
     has_one(:profile, UserProfile)
     has_many(:messages, Message)
 
-    many_to_many(:conversations, ChatApi.Chat.Conversation, join_through: "users_conversations", on_replace: :delete)
+    many_to_many(:conversations, ChatApi.Chat.Conversation,
+      join_through: "users_conversations",
+      on_replace: :delete
+    )
 
     timestamps()
   end
@@ -182,7 +185,38 @@ defmodule ChatApi.Account.User do
       display_name: user.display_name,
       hidden: profile.hidden,
       theme: profile.theme,
-      magnification: profile.magnification,
+      magnification: profile.magnification
+    }
+  end
+
+  def serialize([%User{} | _] = users) do
+    for user <- users do
+      serialize(user)
+    end
+  end
+
+  def serialize(%User{} = user) do
+    %{
+      id: user.id,
+      email: user.email,
+      confirmed_at: user.confirmed_at,
+      display_name: user.display_name
+    }
+  end
+
+  def serialize([]) do
+    []
+  end
+
+  def serialize(%User{} = user, %UserProfile{} = profile) do
+    %{
+      id: user.id,
+      email: user.email,
+      confirmed_at: user.confirmed_at,
+      display_name: user.display_name,
+      hidden: profile.hidden,
+      theme: profile.theme,
+      magnification: profile.magnification
     }
   end
 end
