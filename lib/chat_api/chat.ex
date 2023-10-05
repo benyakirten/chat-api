@@ -44,10 +44,14 @@ defmodule ChatApi.Chat do
     end)
     |> Ecto.Multi.all(:get_users, from(u in User, where: u.id in ^user_ids, select: u))
     |> Ecto.Multi.run(:apply_users, fn _repo, %{get_users: users, get_conversation: conversation} ->
-      conversation
-      |> Conversation.changeset()
-      |> Ecto.Changeset.put_assoc(:users, users)
-      |> Repo.update()
+      if length(users) == length(user_ids) do
+        conversation
+        |> Conversation.changeset()
+        |> Ecto.Changeset.put_assoc(:users, users)
+        |> Repo.update()
+      else
+        {:error, :invalid_ids}
+      end
     end)
   end
 
@@ -114,11 +118,10 @@ defmodule ChatApi.Chat do
       case Conversation.find_private_conversation_by_users_query(user_id1, user_id2) do
         {:error, :invalid_user_ids} -> {:error, :invalid_user_ids}
         query ->
-          conversation = Repo.one(query)
-          if conversation do
-            use_preexisting_private_conversation(conversation.id, first_message_sender, first_message_content)
-          else
-            start_new_private_chat(user_ids, first_message_content, first_message_sender)
+          case Repo.transaction(query) do
+            {:error, _atoms, error, _changes} -> {:error, error}
+            {:ok, %{get_conversation: nil}} -> start_new_private_chat(user_ids, first_message_content, first_message_sender)
+            {:ok, %{get_conversation: conversation}} -> use_preexisting_private_conversation(conversation.id, first_message_sender, first_message_content)
           end
       end
     end

@@ -1,6 +1,7 @@
 defmodule ChatApi.Chat.Conversation do
   alias ChatApi.Chat.{Message, Conversation}
   alias ChatApi.Account.User
+  alias ChatApi.Repo
 
   use Ecto.Schema
 
@@ -55,19 +56,31 @@ defmodule ChatApi.Chat.Conversation do
     user_ids = convert_uuids_to_binary([user_id1, user_id2])
 
     if length(user_ids) == 2 do
-      from(
-          c in Conversation,
-          where: c.private == true,
-          join: uc in subquery(
-            from uc in "users_conversations",
-            where: uc.user_id in ^user_ids,
-            group_by: uc.conversation_id,
-            select: uc.conversation_id,
-            having: count(uc.user_id) == ^length(user_ids)
-          ),
-          on: c.id == uc.conversation_id,
-          group_by: c.id
-        )
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:get_users, fn _repo, _changes ->
+        ids = [user_id1, user_id2]
+        query = from(u in User, where: u.id in ^ids)
+        case Repo.all(query) do
+          users when length(users) < 2 -> {:error, :invalid_ids}
+          users -> {:ok, users}
+        end
+      end)
+      |> Ecto.Multi.one(
+        :get_conversation,
+        from(
+            c in Conversation,
+            where: c.private == true,
+            join: uc in subquery(
+              from uc in "users_conversations",
+              where: uc.user_id in ^user_ids,
+              group_by: uc.conversation_id,
+              select: uc.conversation_id,
+              having: count(uc.user_id) == ^length(user_ids)
+            ),
+            on: c.id == uc.conversation_id,
+            group_by: c.id
+          )
+      )
     else
       {:error, :invalid_user_ids}
     end
