@@ -2,6 +2,7 @@ defmodule ChatApiWeb.UserSocket do
   alias ChatApi.Token
   use Phoenix.Socket
 
+  alias ChatApi.Chat
   alias ChatApi.Chat.{Conversation, Message}
   alias ChatApi.Account.User
 
@@ -34,12 +35,16 @@ defmodule ChatApiWeb.UserSocket do
 
   defp get_conversation_data(socket, token, conversation_id) do
     if authorized?(socket, token) do
-      ChatApi.Chat.get_conversation_details(conversation_id, socket.assigns.user_id)
+      Chat.get_conversation_details(conversation_id, socket.assigns.user_id)
     else
       {:error, :unauthorized}
     end
   end
 
+  @doc """
+  Verify the user is part of the conversation. If so, retrieve the conversation,
+  the users and all messages (in descending order).
+  """
   def handle_conversation_channel_join(conversation_id, payload, socket) do
     case get_conversation_data(socket, payload["token"], conversation_id) do
       {:error, reason} ->
@@ -52,7 +57,7 @@ defmodule ChatApiWeb.UserSocket do
           "messages" => Message.serialize(conversation.messages)
         }
 
-        {:ok, data, socket}
+        {:ok, data, assign(socket, :conversation_id, conversation_id)}
     end
   end
 end
