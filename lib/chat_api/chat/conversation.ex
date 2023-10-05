@@ -134,10 +134,8 @@ defmodule ChatApi.Chat.Conversation do
     )
   end
 
-  def serialize([%Conversation{} | _] = conversations) do
-    for conversation <- conversations do
-      serialize(conversation)
-    end
+  def serialize([%Conversation{} = head | tail]) do
+    [serialize(head) | serialize(tail)]
   end
 
   def serialize(%Conversation{} = conversation) do

@@ -165,34 +165,8 @@ defmodule ChatApi.Account.User do
     |> validate_length(:display_name, min: 3, max: 20)
   end
 
-  def serialize_users(users) do
-    for user <- users, do: serialize_user(user)
-  end
-
-  def serialize_user(%User{} = user) do
-    %{
-      id: user.id,
-      email: user.email,
-      display_name: user.display_name
-    }
-  end
-
-  def serialize_user(%User{} = user, %UserProfile{} = profile) do
-    %{
-      id: user.id,
-      email: user.email,
-      confirmed_at: user.confirmed_at,
-      display_name: user.display_name,
-      hidden: profile.hidden,
-      theme: profile.theme,
-      magnification: profile.magnification
-    }
-  end
-
-  def serialize([%User{} | _] = users) do
-    for user <- users do
-      serialize(user)
-    end
+  def serialize([%User{} = head | tail]) do
+    [serialize(head) | serialize(tail)]
   end
 
   def serialize(%User{} = user) do

@@ -31,10 +31,8 @@ defmodule ChatApi.Chat.Message do
     from(m in Message, where: m.id == ^message_id and m.user_id == ^user_id)
   end
 
-  def serialize([%Message{} | _] = messages) do
-    for message <- messages do
-      serialize(message)
-    end
+  def serialize([%Message{} = head | tail]) do
+    [serialize(head) | serialize(tail)]
   end
 
   def serialize(%Message{} = message) do
