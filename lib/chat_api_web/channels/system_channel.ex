@@ -75,10 +75,14 @@ defmodule ChatApiWeb.SystemChannel do
   end
 
   def handle_in("start_conversation", payload, socket) do
-    if UserSocket.authorized?(socket, payload["token"]) do
-      # TODO: Actually call the ChatApi.Chat functions
-      ChatApiWeb.Endpoint.broadcast("user:#{socket.assigns.user_id}", "new_conversation", %{"this" => "works?"})
-      {:noreply, socket}
+    %{"user_ids" => user_ids, "private" => private, "message" => first_message_content, "alias" => conversation_alias, "token" => token} = payload
+    if UserSocket.authorized?(socket, token) do
+      case ChatApi.Chat.start_conversation(user_ids, private, first_message_content, socket.assigns.user_id, conversation_alias) do
+        {:error, reason} -> {:reply, {:error, reason}, socket}
+        {:ok, conversation} ->
+          for user_id <- user_ids, do: ChatApiWeb.Endpoint.broadcast("user:#{user_id}", "new_conversation", %{"conversation_id" => conversation.id})
+          {:noreply, socket}
+      end
     else
       {:reply, {:error, :invalid_token}, socket}
     end

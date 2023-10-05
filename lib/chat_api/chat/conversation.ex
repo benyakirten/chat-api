@@ -77,10 +77,6 @@ defmodule ChatApi.Chat.Conversation do
     from(c in Conversation, join: u in assoc(c, :users), where: c.id == ^conversation_id and u.id == ^user_id)
   end
 
-  def conversation_with_preloads_query(conversation_id) do
-    from(c in Conversation, where: c.id == ^conversation_id, preload: [:users])
-  end
-
   def get_user_group_conversation_query(conversation_id, user_id) do
     from(c in Conversation, join: u in assoc(c, :users), where: c.private == ^false and c.id == ^conversation_id and u.id == ^user_id, preload: :users)
   end
