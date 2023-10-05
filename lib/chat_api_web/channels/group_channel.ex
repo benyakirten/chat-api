@@ -31,6 +31,17 @@ defmodule ChatApiWeb.ConversationChannel do
     end
   end
 
+  def handle_in("leave_channel", payload, socket) do
+    if UserSocket.authorized?(socket, payload["token"]) do
+      case Chat.leave_conversation(socket.assigns.conversation_id, socket.assigns.user_id) do
+        {:error, error} -> {:reply, {:error, error}, socket}
+        {:ok, _} -> {:noreply, socket}
+      end
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
+  end
+
   @impl true
   def handle_in("send_message", payload, socket) do
     %{"token" => token, "content" => content} = payload
@@ -42,6 +53,7 @@ defmodule ChatApiWeb.ConversationChannel do
 
         {:ok, message} ->
           broadcast!(socket, "new_message", %{"message" => Serializer.serialize(message)})
+          {:noreply, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}

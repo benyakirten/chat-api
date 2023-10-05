@@ -8,18 +8,21 @@ defmodule ChatApiWeb.PrivateChannel do
     UserSocket.handle_conversation_channel_join(conversation_id, payload, socket)
   end
 
-  # Channels can be used in a request/response fashion
-  # by sending replies to requests from the client
   @impl true
-  def handle_in("ping", payload, socket) do
-    {:reply, {:ok, payload}, socket}
-  end
+  def handle_in("send_message", payload, socket) do
+    %{"token" => token, "content" => content} = payload
 
-  # It is also common to receive messages from the client and
-  # broadcast to everyone in the current topic (conversation:lobby).
-  @impl true
-  def handle_in("shout", payload, socket) do
-    broadcast(socket, "shout", payload)
-    {:noreply, socket}
+    if UserSocket.authorized?(socket, token) do
+      case Chat.send_message(socket.assigns.conversation_id, socket.assigns.user_id, content) do
+        {:error, error} ->
+          {:reply, {:error, error}, socket}
+
+        {:ok, message} ->
+          broadcast!(socket, "new_message", %{"message" => Serializer.serialize(message)})
+          {:noreply, socket}
+      end
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
   end
 end
