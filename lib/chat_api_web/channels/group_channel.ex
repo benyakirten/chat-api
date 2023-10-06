@@ -66,4 +66,22 @@ defmodule ChatApiWeb.GroupChannel do
       {:reply, {:error, :invalid_token}, socket}
     end
   end
+
+  def handle_in("start_typing", payload, socket) do
+    if UserSocket.authorized?(socket, payload["token"]) do
+      broadcast!(socket, "start_typing", %{"user_id" => socket.assigns.user_id})
+      {:noreply, socket}
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
+  end
+
+  def handle_in("finish_typing", payload, socket) do
+    if UserSocket.authorized?(socket, payload["token"]) do
+      broadcast!(socket, "finish_typing", %{"user_id" => socket.assigns.user_id})
+      {:noreply, socket}
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
+  end
 end
