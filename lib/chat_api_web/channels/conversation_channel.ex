@@ -1,4 +1,4 @@
-defmodule ChatApiWeb.GroupChannel do
+defmodule ChatApiWeb.ConversationChannel do
   use ChatApiWeb, :channel
 
   alias ChatApiWeb.UserSocket
@@ -6,7 +6,7 @@ defmodule ChatApiWeb.GroupChannel do
   alias ChatApi.Serializer
 
   @impl true
-  def join("group:" <> conversation_id, payload, socket) do
+  def join("conversation:" <> conversation_id, payload, socket) do
     UserSocket.handle_conversation_channel_join(conversation_id, payload, socket)
   end
 

@@ -5,8 +5,7 @@ defmodule ChatApiWeb.UserSocket do
   use Phoenix.Socket
 
   channel "system:*", ChatApiWeb.SystemChannel
-  channel "private:*", ChatApiWeb.PrivateChannel
-  channel "group:*", ChatApiWeb.GroupChannel
+  channel "conversation:*", ChatApiWeb.ConversationChannel
   channel "user:*", ChatApiWeb.UserChannel
 
   @impl true
