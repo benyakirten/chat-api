@@ -302,8 +302,12 @@ defmodule ChatApi.Chat do
         :no_conversation
       )
       |> Ecto.Multi.run(:update_conversation_alias, fn _repo, %{get_conversation: conversation} ->
-        Conversation.changeset(conversation, %{alias: new_alias})
-        |> Repo.update()
+        if conversation.private do
+          {:error, :private_conversation}
+        else
+          Conversation.changeset(conversation, %{alias: new_alias})
+          |> Repo.update()
+        end
       end)
       |> Repo.transaction()
 

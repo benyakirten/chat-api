@@ -38,7 +38,7 @@ defmodule ChatApiWeb.ConversationChannel do
           {:reply, {:error, error}, socket}
 
         :ok ->
-          broadcast!(socket, "user_leave", %{
+          broadcast!(socket, "leave_channel", %{
             user_id: socket.assigns.user_id
           })
 
@@ -59,8 +59,9 @@ defmodule ChatApiWeb.ConversationChannel do
           {:reply, {:error, error}, socket}
 
         {:ok, message} ->
-          broadcast!(socket, "new_message", %{"message" => Serializer.serialize(message)})
-          {:noreply, socket}
+          msg = %{"message" => Serializer.serialize(message)}
+          broadcast!(socket, "new_message", msg)
+          {:reply, {:ok, msg}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
