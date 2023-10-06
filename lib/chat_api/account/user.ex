@@ -19,7 +19,7 @@ defmodule ChatApi.Account.User do
   schema "users" do
     field(:email, :string)
     field(:password, :string, virtual: true, redact: true)
-    field(:hashed_password, :string)
+    field(:hashed_password, :string, redact: true)
     field(:confirmed_at, :naive_datetime)
     field(:display_name, :string)
 
