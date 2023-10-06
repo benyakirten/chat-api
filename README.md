@@ -1,11 +1,10 @@
 # Table Of Contents
 
 1. [What is this?](#what-is-this)
-2. [How do I run this?](#how-do-i-run-this)
-3. [Data Models](#data-models)
-4. [API (or how do I build a chat client)](#api)
-5. [Why?](#why)
-6. [What's missing?](#whats-missing)
+1. [How do I run this?](#how-do-i-run-this)
+1. [Data Models](#data-models)
+1. [API (or how do I build a chat client)](#api)
+1. [What's missing?](#whats-missing)
 
 ## What is this?
 
@@ -74,14 +73,6 @@ The socket interfaces are divided into three channels (a Phoenix abstraction ove
 `conversation:{uuid}`
 
 The exact parameters of these endpoints and how to use them will be explained later.
-
-## Why
-
-- Official website: https://www.phoenixframework.org/
-- Guides: https://hexdocs.pm/phoenix/overview.html
-- Docs: https://hexdocs.pm/phoenix
-- Forum: https://elixirforum.com/c/phoenix-forum
-- Source: https://github.com/phoenixframework/phoenix
 
 ## What's Missing
 
