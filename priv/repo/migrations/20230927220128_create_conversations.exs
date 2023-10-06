@@ -12,6 +12,7 @@ defmodule ChatApi.Repo.Migrations.CreateConversations do
     create table(:users_conversations, primary_key: false) do
       add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all), null: false)
       add(:conversation_id, references(:conversations, type: :binary_id, on_delete: :delete_all), null: false)
+      add(:last_read, :utc_datetime, default: fragment("current_timestamp"))
     end
 
     create index(:users_conversations, [:conversation_id])

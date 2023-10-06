@@ -26,7 +26,9 @@ defmodule ChatApiWeb.AuthController do
         user: user,
         profile: profile,
         auth_token: auth_token,
-        refresh_token: refresh_token
+        refresh_token: refresh_token,
+        conversations: [],
+        users: []
       )
     end
   end
