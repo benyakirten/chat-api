@@ -82,6 +82,6 @@ defmodule ChatApi.Serializer do
   end
 
   defp attach_javascript_timezone(time) do
-    to_string(time) <> "+00.00"
+    to_string(time) <> "+00:00"
   end
 end

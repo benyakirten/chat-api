@@ -1,4 +1,4 @@
-defmodule ChatApiWeb.ConversationChannel do
+defmodule ChatApiWeb.GroupChannel do
   use ChatApiWeb, :channel
 
   alias ChatApiWeb.UserSocket
@@ -20,7 +20,7 @@ defmodule ChatApiWeb.ConversationChannel do
           {:reply, {:error, reason}, socket}
 
         {:ok, conversation} ->
-          broadcast!(socket, "update_conversation_name", %{
+          broadcast!(socket, "update_alias", %{
             "conversation" => Serializer.serialize(conversation)
           })
 
@@ -34,8 +34,15 @@ defmodule ChatApiWeb.ConversationChannel do
   def handle_in("leave_channel", payload, socket) do
     if UserSocket.authorized?(socket, payload["token"]) do
       case Chat.leave_conversation(socket.assigns.conversation_id, socket.assigns.user_id) do
-        {:error, error} -> {:reply, {:error, error}, socket}
-        {:ok, _} -> {:noreply, socket}
+        {:error, error} ->
+          {:reply, {:error, error}, socket}
+
+        :ok ->
+          broadcast!(socket, "user_leave", %{
+            user_id: socket.assigns.user_id
+          })
+
+          {:noreply, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}

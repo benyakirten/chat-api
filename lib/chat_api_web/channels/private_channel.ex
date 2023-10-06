@@ -2,6 +2,8 @@ defmodule ChatApiWeb.PrivateChannel do
   use ChatApiWeb, :channel
 
   alias ChatApiWeb.UserSocket
+  alias ChatApi.Serializer
+  alias ChatApi.Chat
 
   @impl true
   def join("private:" <> conversation_id, payload, socket) do
