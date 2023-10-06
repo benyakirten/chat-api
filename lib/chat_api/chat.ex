@@ -5,6 +5,7 @@ defmodule ChatApi.Chat do
 
   import Ecto.Query
 
+  alias ChatApi.Serializer
   alias ChatApi.Repo
 
   alias ChatApi.Chat.{Conversation, Message}
@@ -254,9 +255,29 @@ defmodule ChatApi.Chat do
   Also verifies that the user is part of the conversation
   """
   def get_conversation_details(conversation_id, user_id) do
-    case Repo.one(Conversation.get_user_conversation_with_details_query(conversation_id, user_id)) do
-      nil -> {:error, :no_conversation}
-      conversation -> {:ok, conversation}
+    transaction = Ecto.Multi.new()
+    |> return_error_on_no_results(
+        :get_conversation,
+        Conversation.get_user_conversation_with_details_query(conversation_id, user_id),
+        :no_conversation
+      )
+    |> Ecto.Multi.run(:get_read_times, fn _repo, _changes ->
+      raw_read_times = Repo.all(Conversation.read_time_for_users_in_conversation_query(conversation_id))
+      read_times = Enum.reduce(raw_read_times, %{}, fn {binary_id, time}, acc ->
+        uuid = Ecto.UUID.load!(binary_id)
+        timezoned_time = Serializer.attach_javascript_timezone(time)
+        Map.put(acc, uuid, timezoned_time)
+      end)
+
+      {:ok, read_times}
+    end)
+    |> Repo.transaction()
+
+    case transaction do
+      {:error, _change_atom, error, _changes} -> {:error, error}
+      {:ok, results} ->
+        %{get_conversation: conversation, get_read_times: read_times} = results
+        {:ok, conversation, read_times}
     end
   end
 

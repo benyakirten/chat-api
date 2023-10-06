@@ -77,11 +77,11 @@ defmodule ChatApi.Serializer do
   # And yes, this is easier than converting a naive date time
   # to a UTC datetime using Elixir since I would need to use
   # an outside library - this is just simple.
-  defp attach_javascript_timezone(nil) do
+  def attach_javascript_timezone(nil) do
     nil
   end
 
-  defp attach_javascript_timezone(time) do
+  def attach_javascript_timezone(time) do
     to_string(time) <> "+00:00"
   end
 end

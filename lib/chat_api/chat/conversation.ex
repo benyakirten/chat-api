@@ -133,4 +133,13 @@ defmodule ChatApi.Chat.Conversation do
       ]
     )
   end
+
+  def read_time_for_users_in_conversation_query(conversation_id) do
+    [conversation_binary_id] = convert_uuids_to_binary([conversation_id])
+
+    from(uc in "users_conversations",
+      where: uc.conversation_id == ^conversation_binary_id,
+      select: {uc.user_id, uc.last_read}
+    )
+  end
 end

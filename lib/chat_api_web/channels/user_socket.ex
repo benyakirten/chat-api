@@ -48,11 +48,12 @@ defmodule ChatApiWeb.UserSocket do
       {:error, reason} ->
         {:error, reason}
 
-      {:ok, conversation} ->
+      {:ok, conversation, read_times} ->
         data = %{
           "conversation" => Serializer.serialize(conversation),
           "users" => Serializer.serialize(conversation.users),
-          "messages" => Serializer.serialize(conversation.messages)
+          "messages" => Serializer.serialize(conversation.messages),
+          "read_times" => read_times
         }
 
         {:ok, data, assign(socket, :conversation_id, conversation_id)}

@@ -286,7 +286,7 @@ defmodule ChatApi.Account do
     "#{frontend_url}/#{to_string(context)}?token=#{token}"
   end
 
-  @spec send_email_with_hashed_token(UserNotifier.limited_token_type(), User.t()) :: {:ok}
+  @spec send_email_with_hashed_token(UserNotifier.limited_token_type(), User.t()) :: :ok
   defp send_email_with_hashed_token(context, user) do
     {confirm_token, hashed_token} = UserToken.build_hashed_token()
     # TODO: Remove these lines once notifier works correctly
@@ -300,6 +300,6 @@ defmodule ChatApi.Account do
 
     url = form_url(context, confirm_token)
     UserNotifier.deliver_email(context, user, url)
-    {:ok}
+    :ok
   end
 end
