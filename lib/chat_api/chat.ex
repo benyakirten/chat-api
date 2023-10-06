@@ -75,17 +75,29 @@ defmodule ChatApi.Chat do
   end
 
   def update_message(message_id, user_id, content) do
-    Ecto.Multi.new()
+    transaction = Ecto.Multi.new()
     |> Ecto.Multi.one(:get_message, Message.message_by_sender_query(message_id, user_id))
     |> Ecto.Multi.run(:update_message, fn _repo, %{get_message: message} ->
       message
       |> Message.changeset(%{content: content})
       |> Repo.update()
     end)
+    |> Repo.transaction()
+
+    case transaction do
+      {:error, _change_atom, error, _changes} -> {:error, error}
+      {:ok, changes} ->
+        {:ok, changes[:update_message]}
+    end
   end
 
   def delete_message(message_id, user_id) do
-    Repo.delete_all(Message.message_by_sender_query(message_id, user_id))
+    result = Repo.delete_all(Message.message_by_sender_query(message_id, user_id))
+
+    case result do
+      {0, _} -> :error
+      _ -> :ok
+    end
   end
 
   def send_message(conversation_id, user_id, content) do
@@ -298,6 +310,17 @@ defmodule ChatApi.Chat do
     case multi do
       {:error, _change_atom, error, _changes} -> {:error, error}
       {:ok, changes} -> {:ok, changes[:update_conversation_alias]}
+    end
+  end
+
+  def update_read_time(conversation_id, user_id) do
+    result = Repo.update_all(
+      Conversation.get_users_conversations_query(conversation_id, user_id),
+      [set: [last_read: DateTime.utc_now()]]
+    )
+    case result do
+      {0, _} -> :error
+      _ -> :ok
     end
   end
 end

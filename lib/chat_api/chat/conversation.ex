@@ -47,7 +47,7 @@ defmodule ChatApi.Chat.Conversation do
     )
   end
 
-  defp convert_uuids_to_binary(uuids) do
+  def convert_uuids_to_binary(uuids) do
     uuids
     |> Stream.map(&Ecto.UUID.dump/1)
     |> Stream.filter(fn result -> result != :error end)

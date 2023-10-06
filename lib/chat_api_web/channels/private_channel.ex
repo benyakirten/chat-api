@@ -45,4 +45,45 @@ defmodule ChatApiWeb.PrivateChannel do
       {:reply, {:error, :invalid_token}, socket}
     end
   end
+
+  def handle_in("read_conversation", payload, socket) do
+    if UserSocket.authorized?(socket, payload["token"]) do
+      case Chat.update_read_time(socket.assigns.conversation_id, socket.assigns.user_id) do
+        :error -> {:reply, {:error, :read_update_failed}, socket}
+        :ok ->
+          broadcast!(socket, "read_conversation", %{"user_id" => socket.assigns.user_id})
+          {:noreply, socket}
+      end
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
+  end
+
+  def handle_in("edit_message", payload, socket) do
+    %{"token" => token, "message_id" => message_id, "content" => content} = payload
+    if UserSocket.authorized?(socket, token) do
+      case Chat.update_message(message_id, socket.assigns.user_id, content) do
+        {:error, error} -> {:reply, {:error, error}, socket}
+        {:ok, message} ->
+          broadcast!(socket, "update_message", %{"message" => Serializer.serialize(message)})
+          {:noreply, socket}
+      end
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
+  end
+
+  def handle_in("delete_message", payload, socket) do
+    %{"token" => token, "message_id" => message_id} = payload
+    if UserSocket.authorized?(socket, token) do
+      case Chat.delete_message(message_id, socket.assigns.user_id) do
+        :error -> {:reply, {:error, :delete_failed}, socket}
+        :ok ->
+          broadcast!(socket, "delete_message", %{"message_id" => message_id})
+          {:noreply, socket}
+      end
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
+  end
 end
