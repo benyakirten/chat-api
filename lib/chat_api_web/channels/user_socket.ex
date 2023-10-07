@@ -1,7 +1,5 @@
 defmodule ChatApiWeb.UserSocket do
-  alias ChatApi.Serializer
   alias ChatApi.Token
-  alias ChatApi.Chat
   use Phoenix.Socket
 
   channel "system:*", ChatApiWeb.SystemChannel
