@@ -19,7 +19,8 @@ defmodule ChatApi.Serializer do
     %{
       hidden: profile.hidden,
       theme: profile.theme,
-      magnification: profile.magnification
+      magnification: profile.magnification,
+      recents: profile.recents
     }
   end
 
@@ -47,16 +48,9 @@ defmodule ChatApi.Serializer do
   end
 
   def serialize(%User{} = user, %UserProfile{} = profile) do
-    %{
-      id: user.id,
-      email: user.email,
-      confirmed_at: attach_javascript_timezone(user.confirmed_at),
-      display_name: user.display_name,
-      hidden: profile.hidden,
-      theme: profile.theme,
-      magnification: profile.magnification,
-      joined: attach_javascript_timezone(user.inserted_at)
-    }
+    %{}
+    |> Map.merge(serialize(user))
+    |> Map.merge(serialize(profile))
   end
 
   # Ecto stores times without the time zone data, but they're all UTC.

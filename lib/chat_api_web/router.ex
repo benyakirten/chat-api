@@ -28,6 +28,7 @@ defmodule ChatApiWeb.Router do
     post("/signout_all", ProfileController, :signout_all)
     post("/token/email_confirm", ProfileController, :request_new_confirmation_token)
     post("/token/email_change", ProfileController, :request_email_change_token)
+    post("/recents", ProfileController, :set_recents)
     patch("/password", ProfileController, :update_password)
     patch("/email", ProfileController, :update_email)
     patch("/profile", ProfileController, :update_profile)

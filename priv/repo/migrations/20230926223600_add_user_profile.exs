@@ -16,6 +16,7 @@ defmodule ChatApi.Repo.Migrations.AddUserProfile do
       add(:theme, :string, null: false, default: "auto")
       add(:magnification, :decimal, scale: 1, precision: 2, null: false, default: 1.0)
       add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all))
+      add(:recents, {:array, :string}, default: [], null: false)
 
       timestamps()
     end

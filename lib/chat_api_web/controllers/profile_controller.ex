@@ -66,15 +66,21 @@ defmodule ChatApiWeb.ProfileController do
 
   def request_new_confirmation_token(%Plug.Conn{assigns: %{user_id: user_id}} = conn, _opts) do
     with user when not is_nil(user) <- Account.get_user(user_id),
-         {:ok} <- Account.deliver_user_confirmation_instructions(user) do
+         :ok <- Account.deliver_user_confirmation_instructions(user) do
       AuthController.send_204(conn)
     end
   end
 
   def request_email_change_token(%Plug.Conn{assigns: %{user_id: user_id}} = conn, _opts) do
     with user when not is_nil(user) <- Account.get_user(user_id),
-         {:ok} <- Account.deliver_user_email_change_instructions(user) do
+         :ok <- Account.deliver_user_email_change_instructions(user) do
       AuthController.send_204(conn)
+    end
+  end
+
+  def set_recents(%Plug.Conn{assigns: %{user_id: user_id}} = conn, %{"recents" => recents}) do
+    with {:ok, profile} <- Account.set_user_profile_recents(user_id, recents) do
+      render(conn, :update_profile, profile: profile)
     end
   end
 end

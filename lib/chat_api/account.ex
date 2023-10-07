@@ -71,22 +71,29 @@ defmodule ChatApi.Account do
       when is_binary(email) and is_binary(password) do
     # TODO: Reduce this to 1 database transaction
     # Multiple database transactions is not only inefficient but error prone
-    transaction = Ecto.Multi.new()
-    |> multi_insert_user(email, password, display_name || email)
-    |> multi_insert_profile()
-    |> multi_create_tokens()
+    transaction =
+      Ecto.Multi.new()
+      |> multi_insert_user(email, password, display_name || email)
+      |> multi_insert_profile()
+      |> multi_create_tokens()
 
     case Repo.transaction(transaction) do
       {:ok, %{user: user, profile: profile, tokens: {auth_token, refresh_token}}} ->
         deliver_user_confirmation_instructions(user)
         {:ok, user, profile, auth_token, refresh_token}
-      {:error, reason} -> {:error, reason}
-      changeset -> {:error, changeset}
+
+      {:error, reason} ->
+        {:error, reason}
+
+      changeset ->
+        {:error, changeset}
     end
   end
 
   defp multi_insert_user(changeset, email, password, display_name) do
-    Ecto.Multi.insert(changeset, :user,
+    Ecto.Multi.insert(
+      changeset,
+      :user,
       %User{}
       |> User.registration_changeset(%{
         email: email,
@@ -108,6 +115,7 @@ defmodule ChatApi.Account do
   defp multi_create_tokens(changeset) do
     Ecto.Multi.run(changeset, :tokens, fn _repo, %{user: user} ->
       {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
+
       case Repo.insert(new_token_changeset) do
         {:ok, _} -> {:ok, {auth_token, refresh_token}}
         error -> error
@@ -167,28 +175,40 @@ defmodule ChatApi.Account do
           {:ok, User.t(), UserProfile.t(), [Conversation.t()], [User.t()], String.t(), String.t()}
           | {:error, any}
   def login(email, password) do
-    transaction = Ecto.Multi.new()
-    |> Ecto.Multi.run(:user, fn _repo, _changes ->
-      with user <- Repo.one(User.user_by_email_query(email)),
-       true <- User.valid_password?(user.hashed_password, password) do
-        {:ok, user}
-       else
-        _ -> {:error, :invalid_credentials}
-       end
-    end)
-    |> Ecto.Multi.run(:conversations, fn _repo, %{user: user} ->
-      {:ok, Repo.all(Conversation.user_conversations_query(user.id))}
-    end)
-    |> Ecto.Multi.run(:conversation_users, fn _repo, %{conversations: conversations, user: user} ->
-      unique_users = Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
-      {:ok, unique_users}
-    end)
-    |> multi_create_tokens()
+    transaction =
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:user, fn _repo, _changes ->
+        with user <- Repo.one(User.user_by_email_query(email)),
+             true <- User.valid_password?(user.hashed_password, password) do
+          {:ok, user}
+        else
+          _ -> {:error, :invalid_credentials}
+        end
+      end)
+      |> Ecto.Multi.run(:conversations, fn _repo, %{user: user} ->
+        {:ok, Repo.all(Conversation.user_conversations_query(user.id))}
+      end)
+      |> Ecto.Multi.run(:conversation_users, fn _repo,
+                                                %{conversations: conversations, user: user} ->
+        unique_users =
+          Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
+
+        {:ok, unique_users}
+      end)
+      |> multi_create_tokens()
 
     case Repo.transaction(transaction) do
-      {:ok, %{user: user, tokens: {auth_token, refresh_token}, conversations: conversations, conversation_users: users}} ->
+      {:ok,
+       %{
+         user: user,
+         tokens: {auth_token, refresh_token},
+         conversations: conversations,
+         conversation_users: users
+       }} ->
         {:ok, user, user.profile, conversations, users, auth_token, refresh_token}
-      _ -> {:error, :invalid_credentials}
+
+      _ ->
+        {:error, :invalid_credentials}
     end
   end
 
@@ -301,5 +321,25 @@ defmodule ChatApi.Account do
     url = form_url(context, confirm_token)
     UserNotifier.deliver_email(context, user, url)
     :ok
+  end
+
+  def set_user_profile_recents(user_id, recents) do
+    transaction =
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:create_changeset, fn _repo, _changes ->
+        case UserProfile.changeset_by_user_id(user_id, %{recents: recents}) do
+          {:error, :not_found} -> {:error, :not_found}
+          changeset -> {:ok, changeset}
+        end
+      end)
+      |> Ecto.Multi.run(:update_changeset, fn _repo, %{create_changeset: changeset} ->
+        Repo.update(changeset)
+      end)
+      |> Repo.transaction()
+
+    case transaction do
+      {:error, _change_atom, error, _changes} -> {:error, error}
+      {:ok, changes} -> {:ok, changes[:update_changeset]}
+    end
   end
 end

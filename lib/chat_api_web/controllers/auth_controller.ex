@@ -6,7 +6,8 @@ defmodule ChatApiWeb.AuthController do
   action_fallback ChatApiWeb.FallbackController
 
   def login(conn, %{"email" => email, "password" => password}) do
-    with {:ok, user, profile, conversations, users, auth_token, refresh_token} <- Account.login(email, password) do
+    with {:ok, user, profile, conversations, users, auth_token, refresh_token} <-
+           Account.login(email, password) do
       render(conn, :login,
         user: user,
         profile: profile,
@@ -55,7 +56,7 @@ defmodule ChatApiWeb.AuthController do
 
   def request_password_reset_token(conn, %{"email" => email}) do
     with user when not is_nil(user) <- Account.get_user_by_email(email),
-         {:ok} <- Account.deliver_user_password_reset_instructions(user) do
+         :ok <- Account.deliver_user_password_reset_instructions(user) do
       send_204(conn)
     end
   end
