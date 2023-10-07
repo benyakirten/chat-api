@@ -7,7 +7,24 @@ defmodule ChatApiWeb.ConversationChannel do
 
   @impl true
   def join("conversation:" <> conversation_id, payload, socket) do
-    UserSocket.handle_conversation_channel_join(conversation_id, payload, socket)
+    if UserSocket.authorized?(socket, payload["token"]) do
+      case Chat.get_conversation_details(conversation_id, socket.assigns.user_id) do
+        {:error, reason} ->
+          {:error, reason}
+
+        {:ok, conversation, read_times} ->
+          data = %{
+            "conversation" => Serializer.serialize(conversation),
+            "users" => Serializer.serialize(conversation.users),
+            "messages" => Serializer.serialize(conversation.messages),
+            "read_times" => read_times
+          }
+
+          {:ok, data, assign(socket, :conversation_id, conversation_id)}
+      end
+    else
+      {:error, :unauthorized}
+    end
   end
 
   @impl true
@@ -89,7 +106,9 @@ defmodule ChatApiWeb.ConversationChannel do
   def handle_in("read_conversation", payload, socket) do
     if UserSocket.authorized?(socket, payload["token"]) do
       case Chat.update_read_time(socket.assigns.conversation_id, socket.assigns.user_id) do
-        :error -> {:reply, {:error, :read_update_failed}, socket}
+        :error ->
+          {:reply, {:error, :read_update_failed}, socket}
+
         :ok ->
           broadcast!(socket, "read_conversation", %{"user_id" => socket.assigns.user_id})
           {:noreply, socket}
@@ -101,9 +120,12 @@ defmodule ChatApiWeb.ConversationChannel do
 
   def handle_in("edit_message", payload, socket) do
     %{"token" => token, "message_id" => message_id, "content" => content} = payload
+
     if UserSocket.authorized?(socket, token) do
       case Chat.update_message(message_id, socket.assigns.user_id, content) do
-        {:error, error} -> {:reply, {:error, error}, socket}
+        {:error, error} ->
+          {:reply, {:error, error}, socket}
+
         {:ok, message} ->
           broadcast!(socket, "update_message", %{"message" => Serializer.serialize(message)})
           {:noreply, socket}
@@ -115,9 +137,12 @@ defmodule ChatApiWeb.ConversationChannel do
 
   def handle_in("delete_message", payload, socket) do
     %{"token" => token, "message_id" => message_id} = payload
+
     if UserSocket.authorized?(socket, token) do
       case Chat.delete_message(message_id, socket.assigns.user_id) do
-        :error -> {:reply, {:error, :delete_failed}, socket}
+        :error ->
+          {:reply, {:error, :delete_failed}, socket}
+
         :ok ->
           broadcast!(socket, "delete_message", %{"message_id" => message_id})
           {:noreply, socket}
