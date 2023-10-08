@@ -10,7 +10,6 @@ defmodule ChatApi.Serializer do
     %{
       id: user.id,
       email: user.email,
-      confirmed_at: user.confirmed_at,
       display_name: user.display_name
     }
   end
@@ -50,6 +49,7 @@ defmodule ChatApi.Serializer do
   def serialize(%User{} = user, %UserProfile{} = profile) do
     %{}
     |> Map.merge(serialize(user))
+    |> Map.merge(%{confirmed_at: user.confirmed_at})
     |> Map.merge(serialize(profile))
   end
 
