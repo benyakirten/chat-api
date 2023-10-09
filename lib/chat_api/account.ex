@@ -178,7 +178,7 @@ defmodule ChatApi.Account do
     transaction =
       Ecto.Multi.new()
       |> Ecto.Multi.run(:user, fn _repo, _changes ->
-        with user <- Repo.one(User.user_by_email_query(email)),
+        with user when not is_nil(user) <- Repo.one(User.user_by_email_query(email)),
              true <- User.valid_password?(user.hashed_password, password) do
           {:ok, user}
         else
