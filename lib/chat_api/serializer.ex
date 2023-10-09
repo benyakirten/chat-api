@@ -15,10 +15,12 @@ defmodule ChatApi.Serializer do
   end
 
   def serialize(%UserProfile{} = profile) do
+    magnification = coerce_float(profile.magnification)
+
     %{
       hidden: profile.hidden,
       theme: profile.theme,
-      magnification: profile.magnification,
+      magnification: magnification,
       recents: profile.recents
     }
   end
@@ -78,4 +80,11 @@ defmodule ChatApi.Serializer do
   def attach_javascript_timezone(time) do
     to_string(time) <> "Z"
   end
+
+  defp coerce_float(%Decimal{} = magnification) do
+    {val, _} = magnification |> to_string() |> Float.parse()
+    val
+  end
+
+  defp coerce_float(magnification), do: magnification
 end

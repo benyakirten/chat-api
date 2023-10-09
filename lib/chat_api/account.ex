@@ -188,13 +188,15 @@ defmodule ChatApi.Account do
       |> Ecto.Multi.run(:conversations, fn _repo, %{user: user} ->
         {:ok, Repo.all(Conversation.user_conversations_query(user.id))}
       end)
-      |> Ecto.Multi.run(:conversation_users, fn _repo,
-                                                %{conversations: conversations, user: user} ->
-        unique_users =
-          Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
+      |> Ecto.Multi.run(
+        :conversation_users,
+        fn _repo, %{conversations: conversations, user: user} ->
+          unique_users =
+            Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
 
-        {:ok, unique_users}
-      end)
+          {:ok, unique_users}
+        end
+      )
       |> multi_create_tokens()
 
     case Repo.transaction(transaction) do
