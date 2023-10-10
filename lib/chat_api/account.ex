@@ -222,18 +222,57 @@ defmodule ChatApi.Account do
     Repo.delete_all(UserToken.user_tokens_by_context_query(user_id, [:refresh]))
   end
 
-  @spec use_refresh_token(String.t()) :: {:ok, String.t(), binary()} | {:error, :invalid_token}
+  @spec use_refresh_token(String.t()) ::
+          {:ok, User.t(), UserProfile.t(), [Conversation.t()], [User.t()], String.t(), binary()}
+          | {:error, :invalid_token}
   def use_refresh_token(token) do
-    case UserToken.verify_hashed_token(token, :refresh) do
-      {:ok, user, used_token} ->
+    transaction =
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:verify_token, fn _repo, _changes ->
+        case UserToken.verify_hashed_token(token, :refresh) do
+          {:ok, user, used_token} -> {:ok, {user, used_token}}
+          _ -> {:error, :invalid_token}
+        end
+      end)
+      |> Ecto.Multi.run(:delete_used_token, fn _repo, %{verify_token: {user, used_token}} ->
         {auth_token, refresh_token, new_token_changeset} = create_login_tokens(user)
 
-        Ecto.Multi.new()
-        |> Ecto.Multi.delete(:used_token, used_token)
-        |> Ecto.Multi.insert(:new_token, new_token_changeset)
-        |> Repo.transaction()
+        with {:ok, _} <- Repo.delete(used_token),
+             {:ok, _} <- Repo.insert(new_token_changeset) do
+          {:ok, {auth_token, refresh_token}}
+        else
+          {:error, reason} -> {:error, reason}
+        end
+      end)
+      |> Ecto.Multi.run(:get_profile, fn _repo, %{verify_token: {user, _}} ->
+        case Repo.one(UserProfile.profile_by_user_id_query(user.id)) do
+          profile when not is_nil(profile) -> {:ok, profile}
+          _ -> {:error, :missing_profile}
+        end
+      end)
+      |> Ecto.Multi.run(:conversations, fn _repo, %{verify_token: {user, _}} ->
+        {:ok, Repo.all(Conversation.user_conversations_query(user.id))}
+      end)
+      |> Ecto.Multi.run(
+        :conversation_users,
+        fn _repo, %{conversations: conversations, verify_token: {user, _}} ->
+          unique_users =
+            Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
 
-        {:ok, auth_token, refresh_token}
+          {:ok, unique_users}
+        end
+      )
+
+    case Repo.transaction(transaction) do
+      {:ok,
+       %{
+         verify_token: {user, _},
+         delete_used_token: {auth_token, refresh_token},
+         get_profile: profile,
+         conversations: conversations,
+         conversation_users: users
+       }} ->
+        {:ok, user, profile, conversations, users, auth_token, refresh_token}
 
       _ ->
         {:error, :invalid_token}

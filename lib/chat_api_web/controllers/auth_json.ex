@@ -18,10 +18,6 @@ defmodule ChatApiWeb.AuthJSON do
     }
   end
 
-  def refresh_auth(%{refresh_token: refresh_token, auth_token: auth_token}) do
-    %{refresh_token: refresh_token, auth_token: auth_token}
-  end
-
   def confirm_user(%{user: user}) do
     %{success: true, confirmed_at: user.confirmed_at}
   end
