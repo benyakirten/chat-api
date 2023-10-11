@@ -27,7 +27,7 @@ defmodule ChatApi.Account.UserProfile do
   @doc false
   def changeset(profile, attrs \\ %{}) do
     profile
-    |> cast(attrs, [:theme, :magnification, :recents])
+    |> cast(attrs, [:theme, :magnification, :recents, :hidden])
     |> validate_number(:magnification,
       greater_than_or_equal_to: 0.7,
       less_than_or_equal_to: 1.4,
