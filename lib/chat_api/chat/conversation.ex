@@ -102,13 +102,6 @@ defmodule ChatApi.Chat.Conversation do
     )
   end
 
-  def get_full_conversation_query(conversation_id) do
-    from(c in Conversation,
-      where: c.id == ^conversation_id,
-      preload: [:users, :messages]
-    )
-  end
-
   def get_user_group_conversation_query(conversation_id, user_id) do
     from(c in Conversation,
       join: u in assoc(c, :users),

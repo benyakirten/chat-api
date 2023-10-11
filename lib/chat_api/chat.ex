@@ -72,29 +72,20 @@ defmodule ChatApi.Chat do
         {:error, :invalid_ids}
       end
     end)
-    |> Ecto.Multi.run(:get_final_conversation, fn _repo, %{get_conversation: conversation} ->
-      case Repo.one(Conversation.get_full_conversation_query(conversation.id)) do
-        nil -> {:error, :no_conversation}
-        conversation -> {:ok, conversation}
-      end
-    end)
   end
 
   def update_message(message_id, user_id, content) do
-    transaction =
-      Ecto.Multi.new()
-      |> Ecto.Multi.one(:get_message, Message.message_by_sender_query(message_id, user_id))
-      |> Ecto.Multi.run(:update_message, fn _repo, %{get_message: message} ->
-        message
-        |> Message.changeset(%{content: content})
-        |> Repo.update()
-      end)
-      |> Repo.transaction()
+    transaction = Ecto.Multi.new()
+    |> Ecto.Multi.one(:get_message, Message.message_by_sender_query(message_id, user_id))
+    |> Ecto.Multi.run(:update_message, fn _repo, %{get_message: message} ->
+      message
+      |> Message.changeset(%{content: content})
+      |> Repo.update()
+    end)
+    |> Repo.transaction()
 
     case transaction do
-      {:error, _change_atom, error, _changes} ->
-        {:error, error}
-
+      {:error, _change_atom, error, _changes} -> {:error, error}
       {:ok, changes} ->
         {:ok, changes[:update_message]}
     end
@@ -140,11 +131,6 @@ defmodule ChatApi.Chat do
       |> Ecto.Changeset.put_assoc(:conversation, conversation)
       |> Repo.insert()
     end)
-    |> return_error_on_no_results(
-      :get_final_conversation,
-      Conversation.get_full_conversation_query(conversation_id),
-      :no_conversation
-    )
   end
 
   # Ecto.Multi.one does not return {:ok, val} or {:error, :reason}, just nil or the value
@@ -187,7 +173,6 @@ defmodule ChatApi.Chat do
     else
       [user_id1, user_id2] = user_ids
 
-      # TODO: Make this into one database transaction
       case Conversation.find_private_conversation_by_users_query(user_id1, user_id2) do
         {:error, :invalid_user_ids} ->
           {:error, :invalid_user_ids}
@@ -241,7 +226,7 @@ defmodule ChatApi.Chat do
         {:error, error}
 
       {:ok, queries} ->
-        conversation = queries[:get_final_conversation]
+        conversation = queries[:get_conversation]
         {:ok, conversation}
 
       error ->
@@ -282,32 +267,26 @@ defmodule ChatApi.Chat do
   Also verifies that the user is part of the conversation
   """
   def get_conversation_details(conversation_id, user_id) do
-    transaction =
-      Ecto.Multi.new()
-      |> return_error_on_no_results(
+    transaction = Ecto.Multi.new()
+    |> return_error_on_no_results(
         :get_conversation,
         Conversation.get_user_conversation_with_details_query(conversation_id, user_id),
         :no_conversation
       )
-      |> Ecto.Multi.run(:get_read_times, fn _repo, _changes ->
-        raw_read_times =
-          Repo.all(Conversation.read_time_for_users_in_conversation_query(conversation_id))
-
-        read_times =
-          Enum.reduce(raw_read_times, %{}, fn {binary_id, time}, acc ->
-            uuid = Ecto.UUID.load!(binary_id)
-            timezoned_time = Serializer.attach_javascript_timezone(time)
-            Map.put(acc, uuid, timezoned_time)
-          end)
-
-        {:ok, read_times}
+    |> Ecto.Multi.run(:get_read_times, fn _repo, _changes ->
+      raw_read_times = Repo.all(Conversation.read_time_for_users_in_conversation_query(conversation_id))
+      read_times = Enum.reduce(raw_read_times, %{}, fn {binary_id, time}, acc ->
+        uuid = Ecto.UUID.load!(binary_id)
+        timezoned_time = Serializer.attach_javascript_timezone(time)
+        Map.put(acc, uuid, timezoned_time)
       end)
-      |> Repo.transaction()
+
+      {:ok, read_times}
+    end)
+    |> Repo.transaction()
 
     case transaction do
-      {:error, _change_atom, error, _changes} ->
-        {:error, error}
-
+      {:error, _change_atom, error, _changes} -> {:error, error}
       {:ok, results} ->
         %{get_conversation: conversation, get_read_times: read_times} = results
         {:ok, conversation, read_times}
@@ -339,12 +318,10 @@ defmodule ChatApi.Chat do
   end
 
   def update_read_time(conversation_id, user_id) do
-    result =
-      Repo.update_all(
-        Conversation.get_users_conversations_query(conversation_id, user_id),
-        set: [last_read: DateTime.utc_now()]
-      )
-
+    result = Repo.update_all(
+      Conversation.get_users_conversations_query(conversation_id, user_id),
+      [set: [last_read: DateTime.utc_now()]]
+    )
     case result do
       {0, _} -> :error
       _ -> :ok
