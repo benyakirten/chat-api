@@ -129,7 +129,7 @@ defmodule ChatApi.Chat.Conversation do
       where: c.id == ^conversation_id and u.id == ^user_id,
       preload: [
         :users,
-        messages: ^from(m in Message, order_by: [desc: m.inserted_at])
+        :messages
       ]
     )
   end
