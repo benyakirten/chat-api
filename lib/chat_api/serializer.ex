@@ -27,6 +27,7 @@ defmodule ChatApi.Serializer do
 
   def serialize(%Message{} = message) do
     %{
+      id: message.id,
       sender: message.user_id,
       content: message.content,
       inserted_at: attach_javascript_timezone(message.inserted_at),
