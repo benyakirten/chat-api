@@ -87,7 +87,11 @@ defmodule ChatApiWeb.ConversationChannel do
 
   def handle_in("start_typing", payload, socket) do
     if UserSocket.authorized?(socket, payload["token"]) do
-      broadcast!(socket, "start_typing", %{"user_id" => socket.assigns.user_id})
+      broadcast!(socket, "start_typing", %{
+        "user_id" => socket.assigns.user_id,
+        "conversation_id" => socket.assigns.conversation_id
+      })
+
       {:noreply, socket}
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -96,7 +100,11 @@ defmodule ChatApiWeb.ConversationChannel do
 
   def handle_in("finish_typing", payload, socket) do
     if UserSocket.authorized?(socket, payload["token"]) do
-      broadcast!(socket, "finish_typing", %{"user_id" => socket.assigns.user_id})
+      broadcast!(socket, "finish_typing", %{
+        "user_id" => socket.assigns.user_id,
+        "conversation_id" => socket.assigns.conversation_id
+      })
+
       {:noreply, socket}
     else
       {:reply, {:error, :invalid_token}, socket}
