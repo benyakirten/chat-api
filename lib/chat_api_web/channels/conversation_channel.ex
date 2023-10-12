@@ -127,7 +127,11 @@ defmodule ChatApiWeb.ConversationChannel do
           {:reply, {:error, error}, socket}
 
         {:ok, message} ->
-          broadcast!(socket, "update_message", %{"message" => Serializer.serialize(message)})
+          broadcast!(socket, "update_message", %{
+            "message" => Serializer.serialize(message),
+            "conversation_id" => socket.assigns.conversation_id
+          })
+
           {:noreply, socket}
       end
     else
@@ -144,7 +148,11 @@ defmodule ChatApiWeb.ConversationChannel do
           {:reply, {:error, :delete_failed}, socket}
 
         :ok ->
-          broadcast!(socket, "delete_message", %{"message_id" => message_id})
+          broadcast!(socket, "delete_message", %{
+            "message_id" => message_id,
+            "conversation_id" => socket.assigns.conversation_id
+          })
+
           {:noreply, socket}
       end
     else
