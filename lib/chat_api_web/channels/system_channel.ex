@@ -4,9 +4,12 @@ defmodule ChatApiWeb.SystemChannel do
   alias ChatApi.Account
   use ChatApiWeb, :channel
 
-  defp add_user_id_to_presence(socket), do: Presence.track(socket, socket.assigns.user_id, %{
-    online_at: inspect(System.system_time(:second))
-  })
+  defp add_user_id_to_presence(socket),
+    do:
+      Presence.track(socket, socket.assigns.user_id, %{
+        online_at: inspect(System.system_time(:second))
+      })
+
   defp remove_user_id_from_presence(socket), do: Presence.untrack(socket, socket.assigns.user_id)
 
   @impl true
@@ -17,6 +20,12 @@ defmodule ChatApiWeb.SystemChannel do
     else
       {:error, %{reason: "Invalid Token"}}
     end
+  end
+
+  @impl true
+  def terminate({:shutdown, :closed}, socket) do
+    broadcast!(socket, "user_disconnect", %{"user_id" => socket.assigns.user_id})
+    :ok
   end
 
   @impl true
@@ -64,8 +73,11 @@ defmodule ChatApiWeb.SystemChannel do
                 user_id: socket.assigns.user_id,
                 display_name: updated_user.display_name
               })
+
               {:noreply, socket}
-            error -> {:reply, {:error, error}, socket}
+
+            error ->
+              {:reply, {:error, error}, socket}
           end
         end
       end
@@ -75,10 +87,25 @@ defmodule ChatApiWeb.SystemChannel do
   end
 
   def handle_in("start_conversation", payload, socket) do
-    %{"user_ids" => user_ids, "private" => private, "message" => first_message_content, "alias" => conversation_alias, "token" => token} = payload
+    %{
+      "user_ids" => user_ids,
+      "private" => private,
+      "message" => first_message_content,
+      "alias" => conversation_alias,
+      "token" => token
+    } = payload
+
     if UserSocket.authorized?(socket, token) do
-      case ChatApi.Chat.start_conversation(user_ids, private, first_message_content, socket.assigns.user_id, conversation_alias) do
-        {:error, reason} -> {:reply, {:error, reason}, socket}
+      case ChatApi.Chat.start_conversation(
+             user_ids,
+             private,
+             first_message_content,
+             socket.assigns.user_id,
+             conversation_alias
+           ) do
+        {:error, reason} ->
+          {:reply, {:error, reason}, socket}
+
         {:ok, conversation} ->
           for user_id <- user_ids do
             ChatApiWeb.Endpoint.broadcast(
@@ -91,6 +118,7 @@ defmodule ChatApiWeb.SystemChannel do
               }
             )
           end
+
           {:noreply, socket}
       end
     else
