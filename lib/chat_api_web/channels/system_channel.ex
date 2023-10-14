@@ -23,7 +23,7 @@ defmodule ChatApiWeb.SystemChannel do
   end
 
   @impl true
-  def terminate({:shutdown, :closed}, socket) do
+  def terminate({:shutdown, _}, socket) do
     broadcast!(socket, "user_disconnect", %{"user_id" => socket.assigns.user_id})
     :ok
   end

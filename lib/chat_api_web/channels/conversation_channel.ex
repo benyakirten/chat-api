@@ -28,6 +28,16 @@ defmodule ChatApiWeb.ConversationChannel do
   end
 
   @impl true
+  def terminate({:shutdown, _}, socket) do
+    broadcast!(socket, "finish_typing", %{
+      "user_id" => socket.assigns.user_id,
+      "conversation_id" => socket.assigns.conversation_id
+    })
+
+    :ok
+  end
+
+  @impl true
   def handle_in("change_alias", payload, socket) do
     %{"token" => token, "alias" => new_alias} = payload
 
