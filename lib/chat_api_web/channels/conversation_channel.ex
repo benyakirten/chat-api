@@ -97,6 +97,11 @@ defmodule ChatApiWeb.ConversationChannel do
 
   def handle_in("start_typing", payload, socket) do
     if UserSocket.authorized?(socket, payload["token"]) do
+      broadcast!(socket, "finish_typing", %{
+        "user_id" => socket.assigns.user_id,
+        "conversation_id" => socket.assigns.conversation_id
+      })
+
       broadcast!(socket, "start_typing", %{
         "user_id" => socket.assigns.user_id,
         "conversation_id" => socket.assigns.conversation_id
@@ -111,8 +116,7 @@ defmodule ChatApiWeb.ConversationChannel do
   def handle_in("finish_typing", payload, socket) do
     if UserSocket.authorized?(socket, payload["token"]) do
       broadcast!(socket, "finish_typing", %{
-        "user_id" => socket.assigns.user_id,
-        "conversation_id" => socket.assigns.conversation_id
+        "user_id" => socket.assigns.user_id
       })
 
       {:noreply, socket}
@@ -146,8 +150,7 @@ defmodule ChatApiWeb.ConversationChannel do
 
         {:ok, message} ->
           broadcast!(socket, "update_message", %{
-            "message" => Serializer.serialize(message),
-            "conversation_id" => socket.assigns.conversation_id
+            "message" => Serializer.serialize(message)
           })
 
           {:noreply, socket}
@@ -167,8 +170,7 @@ defmodule ChatApiWeb.ConversationChannel do
 
         :ok ->
           broadcast!(socket, "delete_message", %{
-            "message_id" => message_id,
-            "conversation_id" => socket.assigns.conversation_id
+            "message_id" => message_id
           })
 
           {:noreply, socket}
