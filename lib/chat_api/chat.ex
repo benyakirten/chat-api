@@ -327,4 +327,34 @@ defmodule ChatApi.Chat do
       _ -> :ok
     end
   end
+
+  def modify_conversation(conversation_id, new_member_ids, new_alias) do
+    transaction = Ecto.Multi.new()
+    |> return_error_on_no_results(:get_conversation, Conversation.get_private_conversation(conversation_id), :no_conversation)
+    |> Ecto.Multi.run(:get_users, fn _repo, %{get_conversation: conversation} ->
+      user_ids = Stream.map(conversation.users, &(&1.id))
+      |> Stream.concat(new_member_ids)
+      |> Enum.to_list()
+
+      users = Repo.all(User.multiple_users_by_id_query(user_ids))
+      if length(users) == length(user_ids) do
+        {:ok, users}
+      else
+        {:error, :users_not_found}
+      end
+    end)
+    |> Ecto.Multi.run(:update_conversation, fn _repo, %{get_conversation: conversation, get_users: users} ->
+      Conversation.changeset(conversation, %{alias: new_alias})
+      |> Ecto.Changeset.put_assoc(:users, users)
+      |> Repo.update()
+    end)
+
+    case Repo.transaction(transaction) do
+      {:ok, changes} ->
+        conversation = changes[:update_conversation]
+        user_ids = Enum.map(conversation.users, &(&1.id))
+        {:ok, conversation, user_ids}
+      {:error, _changes, error, _change_atoms} -> {:error, error}
+    end
+  end
 end

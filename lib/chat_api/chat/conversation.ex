@@ -114,6 +114,10 @@ defmodule ChatApi.Chat.Conversation do
     from(c in Conversation, where: c.id == ^conversation_id)
   end
 
+  def get_private_conversation(conversation_id) do
+    from(c in Conversation, where: c.id == ^conversation_id and c.private == ^false, preload: :users)
+  end
+
   def get_users_conversations_query(conversation_id, user_id) do
     [conversation_binary_id, user_binary_id] = convert_uuids_to_binary([conversation_id, user_id])
 

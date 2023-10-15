@@ -164,4 +164,8 @@ defmodule ChatApi.Account.User do
     |> validate_required([:display_name])
     |> validate_length(:display_name, min: 3, max: 20)
   end
+
+  def multiple_users_by_id_query(user_ids) do
+    from(u in User, where: u.id in ^user_ids)
+  end
 end

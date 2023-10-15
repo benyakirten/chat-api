@@ -1,7 +1,7 @@
 defmodule ChatApiWeb.SystemChannel do
   alias ChatApiWeb.UserSocket
   alias ChatApiWeb.Presence
-  alias ChatApi.Account
+  alias ChatApi.{Account, Serializer}
   use ChatApiWeb, :channel
 
   defp add_user_id_to_presence(socket),
@@ -107,22 +107,21 @@ defmodule ChatApiWeb.SystemChannel do
           {:reply, {:error, reason}, socket}
 
         {:ok, conversation} ->
-          for user_id <- user_ids do
-            ChatApiWeb.Endpoint.broadcast(
-              "user:#{user_id}",
-              "new_conversation",
-              %{
-                "conversation_id" => conversation.id,
-                "private" => conversation.private,
-                "alias" => conversation.alias
-              }
-            )
-          end
-
+          broadcast_new_conversation_to_users(conversation, user_ids)
           {:noreply, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
+    end
+  end
+
+  def broadcast_new_conversation_to_users(conversation, user_ids) do
+    for user_id <- user_ids do
+      ChatApiWeb.Endpoint.broadcast(
+        "user:#{user_id}",
+        "new_conversation",
+        Serializer.serialize(conversation)
+      )
     end
   end
 end
