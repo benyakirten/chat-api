@@ -49,9 +49,10 @@ defmodule ChatApiWeb.SystemChannel do
 
   @impl true
   def handle_in("set_hidden", payload, socket) do
-    if UserSocket.authorized?(socket, payload["token"]) do
+    %{"hidden" => hidden, "token" => token} = payload
+    if UserSocket.authorized?(socket, token) do
       send(self(), :update_hidden_state)
-      {:noreply, assign(socket, :hidden, payload["hidden"])}
+      {:noreply, assign(socket, :hidden, hidden)}
     else
       {:reply, {:error, :invalid_token}, socket}
     end
@@ -59,26 +60,20 @@ defmodule ChatApiWeb.SystemChannel do
 
   @impl true
   def handle_in("set_display_name", payload, socket) do
-    # TODO: Make this only one database transaction
-    if UserSocket.authorized?(socket, payload["token"]) do
-      display_name = payload["display_name"]
-
+    %{"token" => token, "display_name" => display_name} = payload
+    if UserSocket.authorized?(socket, token) do
       with user when not is_nil(user) <- Account.get_user(socket.assigns.user_id) do
-        if user.display_name == display_name do
-          {:reply, {:error, :display_name_unchanged}, socket}
-        else
-          case Account.update_display_name(user, display_name) do
-            {:ok, updated_user} ->
-              broadcast!(socket, "update_display_name", %{
-                user_id: socket.assigns.user_id,
-                display_name: updated_user.display_name
-              })
+        case Account.update_display_name(user, display_name) do
+          {:ok, updated_user} ->
+            broadcast!(socket, "update_display_name", %{
+              user_id: socket.assigns.user_id,
+              display_name: updated_user.display_name
+            })
 
-              {:noreply, socket}
+            {:noreply, socket}
 
-            error ->
-              {:reply, {:error, error}, socket}
-          end
+          {:error, error} ->
+            {:reply, {:error, error}, socket}
         end
       end
     else
@@ -120,7 +115,10 @@ defmodule ChatApiWeb.SystemChannel do
       ChatApiWeb.Endpoint.broadcast(
         "user:#{user_id}",
         "new_conversation",
-        Serializer.serialize(conversation)
+        %{
+          "conversation" => Serializer.serialize(conversation),
+          "user_ids" => user_ids
+        }
       )
     end
   end

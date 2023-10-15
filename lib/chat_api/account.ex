@@ -162,9 +162,18 @@ defmodule ChatApi.Account do
     |> Repo.transaction()
   end
 
-  def update_display_name(user, display_name) do
-    User.display_name_changeset(user, %{display_name: display_name})
-    |> Repo.update()
+  def update_display_name(user_id, display_name) do
+    transaction = Ecto.Multi.new()
+    |> Ecto.Multi.one(:get_user, User.user_with_different_name_query(user_id, display_name))
+    |> Ecto.Multi.run(:update_user, fn _repo, %{get_user: user} ->
+      User.display_name_changeset(user, %{display_name: display_name})
+      |> Repo.update()
+    end)
+
+    case Repo.transaction((transaction)) do
+      {:ok, changes} -> {:ok, changes[:update_user]}
+      {:error, _changes, error, _change_atoms} -> {:error, error}
+    end
   end
 
   @doc """

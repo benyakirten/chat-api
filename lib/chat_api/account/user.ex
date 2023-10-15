@@ -168,4 +168,8 @@ defmodule ChatApi.Account.User do
   def multiple_users_by_id_query(user_ids) do
     from(u in User, where: u.id in ^user_ids)
   end
+
+  def user_with_different_name_query(user_id, display_name) do
+    from(u in User, where: u.id == ^user_id and u.display_name != ^display_name)
+  end
 end
