@@ -86,9 +86,10 @@ defmodule ChatApiWeb.SystemChannel do
       "user_ids" => user_ids,
       "private" => private,
       "message" => first_message_content,
-      "alias" => conversation_alias,
       "token" => token
     } = payload
+
+    conversation_alias = Map.get(payload, "alias", nil)
 
     if UserSocket.authorized?(socket, token) do
       case ChatApi.Chat.start_conversation(
