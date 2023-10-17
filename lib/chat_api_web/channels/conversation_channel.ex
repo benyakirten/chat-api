@@ -58,14 +58,14 @@ defmodule ChatApiWeb.ConversationChannel do
     end
   end
 
-  def handle_in("leave_channel", payload, socket) do
+  def handle_in("leave_conversation", payload, socket) do
     if UserSocket.authorized?(socket, payload["token"]) do
       case Chat.leave_conversation(socket.assigns.conversation_id, socket.assigns.user_id) do
         {:error, error} ->
           {:reply, {:error, error}, socket}
 
         :ok ->
-          broadcast!(socket, "leave_channel", %{
+          broadcast!(socket, "leave_conversation", %{
             user_id: socket.assigns.user_id
           })
 
