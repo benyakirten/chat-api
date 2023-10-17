@@ -75,17 +75,20 @@ defmodule ChatApi.Chat do
   end
 
   def update_message(message_id, user_id, content) do
-    transaction = Ecto.Multi.new()
-    |> Ecto.Multi.one(:get_message, Message.message_by_sender_query(message_id, user_id))
-    |> Ecto.Multi.run(:update_message, fn _repo, %{get_message: message} ->
-      message
-      |> Message.changeset(%{content: content})
-      |> Repo.update()
-    end)
-    |> Repo.transaction()
+    transaction =
+      Ecto.Multi.new()
+      |> Ecto.Multi.one(:get_message, Message.message_by_sender_query(message_id, user_id))
+      |> Ecto.Multi.run(:update_message, fn _repo, %{get_message: message} ->
+        message
+        |> Message.changeset(%{content: content})
+        |> Repo.update()
+      end)
+      |> Repo.transaction()
 
     case transaction do
-      {:error, _change_atom, error, _changes} -> {:error, error}
+      {:error, _change_atom, error, _changes} ->
+        {:error, error}
+
       {:ok, changes} ->
         {:ok, changes[:update_message]}
     end
@@ -267,26 +270,32 @@ defmodule ChatApi.Chat do
   Also verifies that the user is part of the conversation
   """
   def get_conversation_details(conversation_id, user_id) do
-    transaction = Ecto.Multi.new()
-    |> return_error_on_no_results(
+    transaction =
+      Ecto.Multi.new()
+      |> return_error_on_no_results(
         :get_conversation,
         Conversation.get_user_conversation_with_details_query(conversation_id, user_id),
         :no_conversation
       )
-    |> Ecto.Multi.run(:get_read_times, fn _repo, _changes ->
-      raw_read_times = Repo.all(Conversation.read_time_for_users_in_conversation_query(conversation_id))
-      read_times = Enum.reduce(raw_read_times, %{}, fn {binary_id, time}, acc ->
-        uuid = Ecto.UUID.load!(binary_id)
-        timezoned_time = Serializer.attach_javascript_timezone(time)
-        Map.put(acc, uuid, timezoned_time)
-      end)
+      |> Ecto.Multi.run(:get_read_times, fn _repo, _changes ->
+        raw_read_times =
+          Repo.all(Conversation.read_time_for_users_in_conversation_query(conversation_id))
 
-      {:ok, read_times}
-    end)
-    |> Repo.transaction()
+        read_times =
+          Enum.reduce(raw_read_times, %{}, fn {binary_id, time}, acc ->
+            uuid = Ecto.UUID.load!(binary_id)
+            timezoned_time = Serializer.attach_javascript_timezone(time)
+            Map.put(acc, uuid, timezoned_time)
+          end)
+
+        {:ok, read_times}
+      end)
+      |> Repo.transaction()
 
     case transaction do
-      {:error, _change_atom, error, _changes} -> {:error, error}
+      {:error, _change_atom, error, _changes} ->
+        {:error, error}
+
       {:ok, results} ->
         %{get_conversation: conversation, get_read_times: read_times} = results
         {:ok, conversation, read_times}
@@ -318,10 +327,12 @@ defmodule ChatApi.Chat do
   end
 
   def update_read_time(conversation_id, user_id) do
-    result = Repo.update_all(
-      Conversation.get_users_conversations_query(conversation_id, user_id),
-      [set: [last_read: DateTime.utc_now()]]
-    )
+    result =
+      Repo.update_all(
+        Conversation.get_users_conversations_query(conversation_id, user_id),
+        set: [last_read: DateTime.utc_now()]
+      )
+
     case result do
       {0, _} -> :error
       _ -> :ok
@@ -329,32 +340,45 @@ defmodule ChatApi.Chat do
   end
 
   def modify_conversation(conversation_id, new_member_ids, new_alias) do
-    transaction = Ecto.Multi.new()
-    |> return_error_on_no_results(:get_conversation, Conversation.get_private_conversation(conversation_id), :no_conversation)
-    |> Ecto.Multi.run(:get_users, fn _repo, %{get_conversation: conversation} ->
-      user_ids = Stream.map(conversation.users, &(&1.id))
-      |> Stream.concat(new_member_ids)
-      |> Enum.to_list()
+    transaction =
+      Ecto.Multi.new()
+      |> return_error_on_no_results(
+        :get_conversation,
+        Conversation.get_private_conversation(conversation_id),
+        :no_conversation
+      )
+      |> Ecto.Multi.run(:get_users, fn _repo, %{get_conversation: conversation} ->
+        user_ids =
+          Stream.map(conversation.users, & &1.id)
+          |> Stream.concat(new_member_ids)
+          |> Enum.to_list()
 
-      users = Repo.all(User.multiple_users_by_id_query(user_ids))
-      if length(users) == length(user_ids) do
-        {:ok, users}
-      else
-        {:error, :users_not_found}
-      end
-    end)
-    |> Ecto.Multi.run(:update_conversation, fn _repo, %{get_conversation: conversation, get_users: users} ->
-      Conversation.changeset(conversation, %{alias: new_alias})
-      |> Ecto.Changeset.put_assoc(:users, users)
-      |> Repo.update()
-    end)
+        users = Repo.all(User.multiple_users_by_id_query(user_ids))
+
+        if length(users) == length(user_ids) do
+          {:ok, users}
+        else
+          {:error, :users_not_found}
+        end
+      end)
+      |> Ecto.Multi.run(:update_conversation, fn _repo,
+                                                 %{
+                                                   get_conversation: conversation,
+                                                   get_users: users
+                                                 } ->
+        Conversation.changeset(conversation, %{alias: new_alias})
+        |> Ecto.Changeset.put_assoc(:users, users)
+        |> Repo.update()
+      end)
 
     case Repo.transaction(transaction) do
       {:ok, changes} ->
         conversation = changes[:update_conversation]
-        user_ids = Enum.map(conversation.users, &(&1.id))
+        user_ids = Enum.map(conversation.users, & &1.id)
         {:ok, conversation, user_ids}
-      {:error, _changes, error, _change_atoms} -> {:error, error}
+
+      {:error, _changes, error, _change_atoms} ->
+        {:error, error}
     end
   end
 end

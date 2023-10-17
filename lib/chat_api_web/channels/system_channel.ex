@@ -50,6 +50,7 @@ defmodule ChatApiWeb.SystemChannel do
   @impl true
   def handle_in("set_hidden", payload, socket) do
     %{"hidden" => hidden, "token" => token} = payload
+
     if UserSocket.authorized?(socket, token) do
       send(self(), :update_hidden_state)
       {:noreply, assign(socket, :hidden, hidden)}
@@ -61,6 +62,7 @@ defmodule ChatApiWeb.SystemChannel do
   @impl true
   def handle_in("set_display_name", payload, socket) do
     %{"token" => token, "display_name" => display_name} = payload
+
     if UserSocket.authorized?(socket, token) do
       with user when not is_nil(user) <- Account.get_user(socket.assigns.user_id) do
         case Account.update_display_name(user, display_name) do
@@ -103,8 +105,9 @@ defmodule ChatApiWeb.SystemChannel do
           {:reply, {:error, reason}, socket}
 
         {:ok, conversation} ->
+          # Retrieve new users to users
           broadcast_new_conversation_to_users(conversation, user_ids)
-          {:noreply, socket}
+          {:reply, {:ok, conversation.id}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
