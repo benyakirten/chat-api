@@ -65,11 +65,11 @@ defmodule ChatApiWeb.SystemChannel do
 
     if UserSocket.authorized?(socket, token) do
       with user when not is_nil(user) <- Account.get_user(socket.assigns.user_id) do
-        case Account.update_display_name(user, display_name) do
+        case Account.update_display_name(user.id, display_name) do
           {:ok, updated_user} ->
             broadcast!(socket, "update_display_name", %{
               "user_id" => socket.assigns.user_id,
-              "display_name" => display_name
+              "display_name" => updated_user.display_name
             })
 
             {:noreply, socket}
