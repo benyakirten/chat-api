@@ -68,8 +68,8 @@ defmodule ChatApiWeb.SystemChannel do
         case Account.update_display_name(user, display_name) do
           {:ok, updated_user} ->
             broadcast!(socket, "update_display_name", %{
-              user_id: socket.assigns.user_id,
-              display_name: updated_user.display_name
+              "user_id" => socket.assigns.user_id,
+              "display_name" => display_name
             })
 
             {:noreply, socket}
