@@ -31,7 +31,7 @@ defmodule ChatApiWeb.ConversationChannel do
   @impl true
   def terminate({:shutdown, _}, socket) do
     broadcast!(socket, "finish_typing", %{
-      "user_id" => socket.assigns.user_id,
+      "user_id" => socket.assigns.user_id
     })
 
     :ok
@@ -88,6 +88,11 @@ defmodule ChatApiWeb.ConversationChannel do
         {:ok, message} ->
           msg = %{"message" => Serializer.serialize(message)}
           broadcast!(socket, "new_message", msg)
+
+          broadcast!(socket, "finish_typing", %{
+            "user_id" => socket.assigns.user_id
+          })
+
           {:reply, {:ok, msg}, socket}
       end
     else
@@ -97,12 +102,8 @@ defmodule ChatApiWeb.ConversationChannel do
 
   def handle_in("start_typing", payload, socket) do
     if UserSocket.authorized?(socket, payload["token"]) do
-      broadcast!(socket, "finish_typing", %{
-        "user_id" => socket.assigns.user_id,
-      })
-
       broadcast!(socket, "start_typing", %{
-        "user_id" => socket.assigns.user_id,
+        "user_id" => socket.assigns.user_id
       })
 
       {:noreply, socket}
@@ -183,10 +184,12 @@ defmodule ChatApiWeb.ConversationChannel do
 
     if UserSocket.authorized?(socket, token) do
       new_alias = if new_alias == "", do: nil, else: new_alias
+
       case Chat.modify_conversation(socket.assigns.conversation_id, new_members, new_alias) do
         {:ok, conversation, user_ids} ->
           SystemChannel.broadcast_new_conversation_to_users(conversation, user_ids)
           {:noreply, socket}
+
         {:error, error} ->
           {:reply, {:error, error}, socket}
       end
