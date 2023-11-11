@@ -429,10 +429,4 @@ defmodule ChatApi.Account do
       {:error, _changes, _error, _change_atoms} -> {:error, :invalid_token}
     end
   end
-
-  def user_logged_in?(user_id) do
-    query = UserToken.active_user_tokens_for_context_token(user_id, :refresh)
-    num_tokens = Repo.all(query)
-    length(num_tokens) > 0
-  end
 end
