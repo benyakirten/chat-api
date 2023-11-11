@@ -1,4 +1,5 @@
 defmodule ChatApiWeb.Router do
+  alias ChatApiWeb.ProfileController
   use ChatApiWeb, :router
 
   # NEVER EVER ALIAS YOUR CONTROLLERS IN THIS FILE
@@ -25,6 +26,7 @@ defmodule ChatApiWeb.Router do
 
   scope "/api", ChatApiWeb do
     pipe_through(:api)
+    post("/signout", ProfileController, :signout)
     post("/signout_all", ProfileController, :signout_all)
     post("/token/email_confirm", ProfileController, :request_new_confirmation_token)
     post("/token/email_change", ProfileController, :request_email_change_token)
