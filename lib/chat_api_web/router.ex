@@ -1,8 +1,6 @@
 defmodule ChatApiWeb.Router do
-  alias ChatApiWeb.ProfileController
-  use ChatApiWeb, :router
-
   # NEVER EVER ALIAS YOUR CONTROLLERS IN THIS FILE
+  use ChatApiWeb, :router
 
   pipeline :api do
     plug(:accepts, ["json"])
