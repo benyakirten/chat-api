@@ -65,8 +65,8 @@ defmodule ChatApi.Account.UserToken do
 
   The authorization token itself cannot be revoked, but it only has a lifespan of 30 minutes.
   """
-  @spec get_active_user_tokens_for_context(String.t(), token_type()) :: Ecto.Query.t()
-  def get_active_user_tokens_for_context(user_id, context) do
+  @spec active_user_tokens_for_context_token(String.t(), token_type()) :: Ecto.Query.t()
+  def active_user_tokens_for_context_token(user_id, context) do
     lifespan = token_lifespan_for_context(context)
 
     from(t in UserToken,

@@ -23,12 +23,6 @@ defmodule ChatApiWeb.SystemChannel do
   end
 
   @impl true
-  def terminate({:shutdown, _}, socket) do
-    broadcast!(socket, "user_disconnect", %{"user_id" => socket.assigns.user_id})
-    :ok
-  end
-
-  @impl true
   def handle_info(:track_user, socket) do
     if socket.assigns.hidden do
       :ok = remove_user_id_from_presence(socket)

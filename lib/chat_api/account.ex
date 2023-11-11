@@ -399,4 +399,34 @@ defmodule ChatApi.Account do
       {:ok, changes} -> {:ok, changes[:update_changeset]}
     end
   end
+
+  @doc """
+  Removes a specified refresh token for the user
+  """
+  @spec sign_out(String.t(), String.t()) ::
+          {:ok, :signed_out} | {:error, :invalid_token}
+  def sign_out(user_id, token) do
+    transaction =
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:verify_token, fn _repo, _changesets ->
+        case UserToken.verify_hashed_token(token, :refresh) do
+          {:ok, user, token} when user.id == user_id ->
+            {:ok, token.token}
+
+          _ ->
+            {:error, :invalid_token}
+        end
+      end)
+      |> Ecto.Multi.run(:delete_token, fn _repo, %{verify_token: hashed_token} ->
+        case Repo.delete_all(UserToken.user_token_query(user_id, hashed_token)) do
+          {1, _} -> {:ok, :deleted}
+          _ -> {:error, :unable_to_delete}
+        end
+      end)
+
+    case Repo.transaction(transaction) do
+      {:ok, _} -> {:ok, :signed_out}
+      {:error, _changes, _error, _change_atoms} -> {:error, :invalid_token}
+    end
+  end
 end
