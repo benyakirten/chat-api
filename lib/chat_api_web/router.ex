@@ -1,5 +1,6 @@
 defmodule ChatApiWeb.Router do
   # NEVER EVER ALIAS YOUR CONTROLLERS IN THIS FILE
+  # Your IDE might do it automatically - BE CAREFUL
   use ChatApiWeb, :router
 
   pipeline :api do
