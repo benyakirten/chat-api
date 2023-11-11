@@ -23,8 +23,8 @@ defmodule ChatApiWeb.SystemChannel do
   end
 
   @impl true
-  def terminate({:shutdown, _}, socket) do
-    broadcast!(socket, "user_disconnect", %{"user_id" => socket.assigns.user_id})
+  def terminate({:shutdown, _}, _socket) do
+    send(self(), :check_user)
     :ok
   end
 
@@ -37,6 +37,15 @@ defmodule ChatApiWeb.SystemChannel do
     end
 
     push(socket, "presence_state", Presence.list(socket))
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(:check_user, socket) do
+    if !Account.user_logged_in?(socket.assigns.user_id) do
+      remove_user_id_from_presence(socket)
+    end
+
     {:noreply, socket}
   end
 
@@ -111,6 +120,21 @@ defmodule ChatApiWeb.SystemChannel do
       end
     else
       {:reply, {:error, :invalid_token}, socket}
+    end
+  end
+
+  def handle_in("signout", %{"token" => token, "refresh_token" => refresh_token}, socket) do
+    if UserSocket.authorized?(socket, token) do
+      case Account.sign_out(socket.assigns.user_id, refresh_token) do
+        {:ok, :signed_out} ->
+          send(self(), :check_user)
+          {:noreply, socket}
+
+        _ ->
+          {:reply, {:error, :invalid_token}, socket}
+      end
+    else
+      {:reply, {:error, :unauthorized}, socket}
     end
   end
 
