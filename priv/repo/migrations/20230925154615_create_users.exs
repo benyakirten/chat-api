@@ -13,6 +13,12 @@ defmodule ChatApi.Repo.Migrations.CreateUsers do
       timestamps()
     end
 
+    create constraint(
+             :users,
+             "display_name_between_3_and_20",
+             check: "length(display_name) >= 3 and length(display_name) <= 20"
+           )
+
     create(unique_index(:users, [:email]))
     create(index(:users, [:display_name]))
   end
