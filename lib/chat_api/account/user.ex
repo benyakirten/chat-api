@@ -5,6 +5,7 @@ defmodule ChatApi.Account.User do
 
   alias ChatApi.Chat.Message
   alias ChatApi.Account.{UserProfile, UserToken, User}
+  alias ChatApi.Serializer
 
   @type t :: %__MODULE__{
           email: String.t(),
@@ -171,5 +172,26 @@ defmodule ChatApi.Account.User do
 
   def user_with_different_name_query(user_id, display_name) do
     from(u in User, where: u.id == ^user_id and u.display_name != ^display_name)
+  end
+
+  def search_users_query(opts) do
+    case Map.get(opts, "next") do
+      nil ->
+        from u in User,
+          order_by: [desc: u.inserted_at, desc: u.id],
+          where: ilike(u.email, ^get_search_from_opts(opts)) or ilike(u.display_name, ^get_search_from_opts(opts)),
+          limit: ^Map.get(opts, "page_size", 10)
+      next ->
+        {:ok, time, id} = Serializer.decode_token(next)
+        from u in User,
+          order_by: [desc: u.inserted_at, desc: u.id],
+          where: {u.inserted_at, u.id} < {^time, ^id} and
+            (ilike(u.email, ^get_search_from_opts(opts)) or ilike(u.display_name, ^get_search_from_opts(opts))),
+          limit: ^Map.get(opts, "page_size", 10)
+    end
+  end
+
+  defp get_search_from_opts(opts) do
+    "%" <> Map.get(opts, "search", "") <> "%"
   end
 end
