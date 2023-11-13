@@ -180,18 +180,22 @@ defmodule ChatApi.Account.User do
         from u in User,
           order_by: [desc: u.inserted_at, desc: u.id],
           where: ilike(u.email, ^get_search_from_opts(opts)) or ilike(u.display_name, ^get_search_from_opts(opts)),
-          limit: ^Map.get(opts, "page_size", 10)
+          limit: ^get_size_plus_one(opts)
       next ->
         {:ok, time, id} = Serializer.decode_token(next)
         from u in User,
           order_by: [desc: u.inserted_at, desc: u.id],
           where: {u.inserted_at, u.id} < {^time, ^id} and
             (ilike(u.email, ^get_search_from_opts(opts)) or ilike(u.display_name, ^get_search_from_opts(opts))),
-          limit: ^Map.get(opts, "page_size", 10)
+          limit: ^get_size_plus_one(opts)
     end
   end
 
   defp get_search_from_opts(opts) do
     "%" <> Map.get(opts, "search", "") <> "%"
+  end
+
+  defp get_size_plus_one(opts) do
+    Map.get(opts, "page_size", 10) + 1
   end
 end
