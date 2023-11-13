@@ -88,4 +88,13 @@ defmodule ChatApi.Serializer do
   end
 
   defp coerce_float(magnification), do: magnification
+
+  def get_next_token(%User{} = user), do: encode_to_base64(user.inserted_at, user.id)
+
+  @spec encode_to_base64(NaiveDateTime.t(), binary()) :: binary()
+  def encode_to_base64(time, id) do
+    time_str = NaiveDateTime.to_string(time)
+    json_encoded = Jason.encode!(%{"inserted_at" => time_str, "id" => id})
+    Base.encode64(json_encoded)
+  end
 end

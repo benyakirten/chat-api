@@ -207,7 +207,8 @@ defmodule ChatApi.Account do
       |> Ecto.Multi.run(
         :conversation_users,
         fn _repo, %{conversations: conversations, user: user} ->
-          unique_users = Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
+          unique_users =
+            Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
 
           {:ok, unique_users}
         end
@@ -271,7 +272,8 @@ defmodule ChatApi.Account do
       |> Ecto.Multi.run(
         :conversation_users,
         fn _repo, %{conversations: conversations, verify_token: {user, _token}} ->
-          unique_users = Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
+          unique_users =
+            Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
 
           {:ok, unique_users}
         end
