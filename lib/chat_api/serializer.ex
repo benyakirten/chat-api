@@ -2,6 +2,23 @@ defmodule ChatApi.Serializer do
   alias ChatApi.Chat.{Conversation, Message}
   alias ChatApi.Account.{User, UserProfile}
 
+  @doc """
+  Serialize a list of items and provide a next page token
+  """
+  def serialize_all(items, has_next_token) do
+    next_token = case has_next_token do
+      true ->
+        [item] = Enum.take(items, -1)
+        get_next_token(item)
+      false -> ""
+    end
+
+    %{
+      items: serialize(items),
+      next: next_token
+    }
+  end
+
   def serialize([head | tail]) do
     [serialize(head) | serialize(tail)]
   end
@@ -93,7 +110,6 @@ defmodule ChatApi.Serializer do
           :__struct__ => ChatApi.Account.User | ChatApi.Chat.Conversation | ChatApi.Chat.Message,
           :id => binary(),
           :inserted_at => NaiveDateTime.t(),
-          optional(any()) => any()
         }) :: binary()
   def get_next_token(%User{} = user), do: encode_token(user.inserted_at, user.id)
   def get_next_token(%Conversation{} = conversation), do: encode_token(conversation.inserted_at, conversation.id)
