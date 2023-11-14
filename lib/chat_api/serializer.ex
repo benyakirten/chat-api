@@ -1,4 +1,5 @@
 defmodule ChatApi.Serializer do
+  alias ChatApi.Pagination
   alias ChatApi.Chat.{Conversation, Message}
   alias ChatApi.Account.{User, UserProfile}
 
@@ -9,7 +10,7 @@ defmodule ChatApi.Serializer do
     next_token = case has_next_token do
       true ->
         [item] = Enum.take(items, -1)
-        get_next_token(item)
+        Pagination.get_next_token(item)
       false -> ""
     end
 
@@ -105,30 +106,4 @@ defmodule ChatApi.Serializer do
   end
 
   defp coerce_float(magnification), do: magnification
-
-  @spec get_next_token(%{
-          :__struct__ => ChatApi.Account.User | ChatApi.Chat.Conversation | ChatApi.Chat.Message,
-          :id => binary(),
-          :inserted_at => NaiveDateTime.t(),
-        }) :: binary()
-  def get_next_token(%User{} = user), do: encode_token(user.inserted_at, user.id)
-  def get_next_token(%Conversation{} = conversation), do: encode_token(conversation.inserted_at, conversation.id)
-  def get_next_token(%Message{} = message), do: encode_token(message.inserted_at, message.id)
-
-  @spec encode_token(NaiveDateTime.t(), binary()) :: binary()
-  def encode_token(time, id) do
-    time_str = NaiveDateTime.to_string(time)
-    json_encoded = Jason.encode!(%{"inserted_at" => time_str, "id" => id})
-    Base.encode64(json_encoded)
-  end
-
-  @spec decode_token(binary()) :: {:error, :invalid_token} | {:ok, NaiveDateTime.t(), binary()}
-  def decode_token(token) do
-    with {:ok, json_encoded} <- Base.decode64(token),
-      {:ok, %{"inserted_at" => inserted_at, "id" => id}} <- Jason.decode(json_encoded), {:ok, time} <- NaiveDateTime.from_iso8601(inserted_at) do
-      {:ok, time, id}
-    else
-      _ -> {:error, :invalid_token}
-    end
-  end
 end

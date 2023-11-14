@@ -4,7 +4,7 @@ defmodule ChatApi.Account do
   TODO: Make sure everything fails spectacularly - error handler will take care of it
   """
 
-  alias ChatApi.Serializer
+  alias ChatApi.Pagination
   alias ChatApi.Chat.Conversation
   alias ChatApi.{Repo, Token}
   alias ChatApi.Account.{User, UserToken, UserProfile, UserNotifier}
@@ -438,7 +438,7 @@ defmodule ChatApi.Account do
 
     page_token =
       with true <- length(users) > page_size, {:ok, last_user} <- Enum.fetch(users, -1) do
-        Serializer.get_next_token(last_user)
+        Pagination.get_next_token(last_user)
       else
         _ -> ""
       end

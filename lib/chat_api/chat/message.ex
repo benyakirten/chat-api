@@ -32,12 +32,14 @@ defmodule ChatApi.Chat.Message do
     from(m in Message, where: m.id == ^message_id and m.user_id == ^user_id)
   end
 
-  @spec paginate_messages_query(map() | nil) :: Ecto.Query.t()
+  @spec paginate_messages_query(map() | nil) :: {Ecto.Query.t(), integer()}
   def paginate_messages_query(opts \\ %{}) do
     page_size = Pagination.get_page_size(opts)
 
-    from(m in Message)
-    |> Pagination.add_seek_pagination(page_size)
-    |> Pagination.paginate_from(opts)
+    query = from(m in Message)
+      |> Pagination.add_seek_pagination(page_size)
+      |> Pagination.paginate_from(opts)
+
+    {query, page_size}
   end
 end
