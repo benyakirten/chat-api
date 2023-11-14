@@ -174,33 +174,31 @@ defmodule ChatApi.Account.User do
     from(u in User, where: u.id == ^user_id and u.display_name != ^display_name)
   end
 
-  def search_users_query(opts) do
-    # TODO: Figure out how to not need two queries - maybe use a fragment?
-    with next_token when not is_nil(next_token) <- Map.get(opts, "next"),
-         {:ok, time, id} <- Serializer.decode_token(next_token) do
+  @spec search_users_query(map()) :: Ecto.Query.t()
+  def search_users_query(opts \\ %{}) do
+    search_string = "%" <> Map.get(opts, "search", "") <> "%"
+    size_plus_one = Map.get(opts, "page_size", 10) + 1
+
+    query =
       from u in User,
         order_by: [desc: u.inserted_at, desc: u.id],
         where:
-          {u.inserted_at, u.id} < {^time, ^id} and
-            (ilike(u.email, ^get_search_from_opts(opts)) or
-               ilike(u.display_name, ^get_search_from_opts(opts))),
-        limit: ^get_size_plus_one(opts)
+          ilike(u.email, ^search_string) or
+            ilike(u.display_name, ^search_string),
+        limit: ^size_plus_one
+
+    query
+    |> create_search_clause(opts)
+  end
+
+  @spec create_search_clause(Ecto.Query.t(), map()) :: Ecto.Query.t()
+  defp create_search_clause(query, opts) do
+    with next_token when not is_nil(next_token) <- Map.get(opts, "next"),
+         {:ok, time, id} <- Serializer.decode_token(next_token) do
+      query
+      |> where([u], {u.inserted_at, u.id} < {^time, ^id})
     else
-      _ ->
-        from u in User,
-          order_by: [desc: u.inserted_at, desc: u.id],
-          where:
-            ilike(u.email, ^get_search_from_opts(opts)) or
-              ilike(u.display_name, ^get_search_from_opts(opts)),
-          limit: ^get_size_plus_one(opts)
+      _ -> query
     end
-  end
-
-  defp get_search_from_opts(opts) do
-    "%" <> Map.get(opts, "search", "") <> "%"
-  end
-
-  defp get_size_plus_one(opts) do
-    Map.get(opts, "page_size", 10) + 1
   end
 end
