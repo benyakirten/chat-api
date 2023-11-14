@@ -176,7 +176,13 @@ defmodule ChatApi.Account.User do
   @spec search_users_query(map() | nil) :: {Ecto.Query.t(), number()}
   def search_users_query(opts \\ %{}) do
     search_string = "%" <> Map.get(opts, "search", "") <> "%"
-    page_size = Map.get(opts, "page_size", 10)
+
+    # Minimum page size is 1
+    page_size =
+      case Map.get(opts, "page_size", 10) do
+        size when is_integer(size) and size > 0 -> size
+        _ -> 1
+      end
 
     query =
       from(u in User,
