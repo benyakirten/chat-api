@@ -187,23 +187,16 @@ defmodule ChatApi.Account.User do
   """
   @spec search_users_query(map() | nil) :: {Ecto.Query.t(), number()}
   def search_users_query(opts \\ %{}) do
-    search_string = "%" <> Map.get(opts, "search", "") <> "%"
-
-    # Minimum page size is 1
-    page_size =
-      case Map.get(opts, "page_size", 10) do
-        size when is_integer(size) and size > 0 -> size
-        _ -> 1
-      end
+    search_string = Pagination.get_search_string(opts)
+    page_size = Pagination.get_page_size(opts)
 
     query =
       from(u in User,
-        order_by: [desc: u.inserted_at, desc: u.id],
         where:
           ilike(u.email, ^search_string) or
-            ilike(u.display_name, ^search_string),
-        limit: ^(page_size + 1)
+            ilike(u.display_name, ^search_string)
       )
+      |> Pagination.add_seek_pagination(page_size)
       |> Pagination.add_pagination_token_to_query(opts)
 
     {query, page_size}
