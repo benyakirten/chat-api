@@ -5,7 +5,7 @@ defmodule ChatApi.Account.User do
 
   alias ChatApi.Chat.Message
   alias ChatApi.Account.{UserProfile, UserToken, User}
-  alias ChatApi.Serializer
+  alias ChatApi.Pagination
 
   @type t :: %__MODULE__{
           email: String.t(),
@@ -204,19 +204,8 @@ defmodule ChatApi.Account.User do
             ilike(u.display_name, ^search_string),
         limit: ^(page_size + 1)
       )
-      |> check_pagination_token(opts)
+      |> Pagination.add_pagination_token_to_query(opts)
 
     {query, page_size}
-  end
-
-  @spec check_pagination_token(Ecto.Query.t(), map()) :: Ecto.Query.t()
-  defp check_pagination_token(query, opts) do
-    with next_token when not is_nil(next_token) <- Map.get(opts, "next"),
-         {:ok, time, id} <- Serializer.decode_token(next_token) do
-      query
-      |> where([u], {u.inserted_at, u.id} < {^time, ^id})
-    else
-      _ -> query
-    end
   end
 end

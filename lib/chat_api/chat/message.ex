@@ -30,4 +30,9 @@ defmodule ChatApi.Chat.Message do
   def message_by_sender_query(message_id, user_id) do
     from(m in Message, where: m.id == ^message_id and m.user_id == ^user_id)
   end
+
+  @spec paginate_messages_query(map() | nil) :: Ecto.Query.t()
+  def paginate_messages_query(opts \\ 10) do
+    #
+  end
 end
