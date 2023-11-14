@@ -5,7 +5,7 @@ defmodule ChatApi.Pagination do
   @spec get_search_string(map() | nil) :: binary()
   def get_search_string(opts \\ %{}) do
     case Map.get(opts, "search", "") do
-      search when is_binary(search) -> search
+      search when is_binary(search) -> "%" <> search <> "%"
       _ -> "%%"
     end
   end
@@ -33,6 +33,6 @@ defmodule ChatApi.Pagination do
   def add_seek_pagination(query, page_size) do
     query
     |> order_by([u], desc: u.inserted_at, desc: u.id)
-    |> limit([u], ^(page_size + 1))
+    |> limit(^(page_size + 1))
   end
 end
