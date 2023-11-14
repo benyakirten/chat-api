@@ -175,18 +175,23 @@ defmodule ChatApi.Account.User do
   end
 
   def search_users_query(opts) do
-    case Map.get(opts, "next") do
-      nil ->
+    # TODO: Figure out how to not need two queries - maybe use a fragment?
+    with next_token when not is_nil(next_token) <- Map.get(opts, "next"),
+         {:ok, time, id} <- Serializer.decode_token(next_token) do
+      from u in User,
+        order_by: [desc: u.inserted_at, desc: u.id],
+        where:
+          {u.inserted_at, u.id} < {^time, ^id} and
+            (ilike(u.email, ^get_search_from_opts(opts)) or
+               ilike(u.display_name, ^get_search_from_opts(opts))),
+        limit: ^get_size_plus_one(opts)
+    else
+      _ ->
         from u in User,
           order_by: [desc: u.inserted_at, desc: u.id],
-          where: ilike(u.email, ^get_search_from_opts(opts)) or ilike(u.display_name, ^get_search_from_opts(opts)),
-          limit: ^get_size_plus_one(opts)
-      next ->
-        {:ok, time, id} = Serializer.decode_token(next)
-        from u in User,
-          order_by: [desc: u.inserted_at, desc: u.id],
-          where: {u.inserted_at, u.id} < {^time, ^id} and
-            (ilike(u.email, ^get_search_from_opts(opts)) or ilike(u.display_name, ^get_search_from_opts(opts))),
+          where:
+            ilike(u.email, ^get_search_from_opts(opts)) or
+              ilike(u.display_name, ^get_search_from_opts(opts)),
           limit: ^get_size_plus_one(opts)
     end
   end
