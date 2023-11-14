@@ -197,7 +197,7 @@ defmodule ChatApi.Account.User do
             ilike(u.display_name, ^search_string)
       )
       |> Pagination.add_seek_pagination(page_size)
-      |> Pagination.add_pagination_token_to_query(opts)
+      |> Pagination.paginate_from(opts)
 
     {query, page_size}
   end
