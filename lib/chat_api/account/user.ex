@@ -14,7 +14,6 @@ defmodule ChatApi.Account.User do
           confirmed_at: NaiveDateTime | nil,
           display_name: String.t()
         }
-
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "users" do
@@ -174,25 +173,26 @@ defmodule ChatApi.Account.User do
     from(u in User, where: u.id == ^user_id and u.display_name != ^display_name)
   end
 
-  @spec search_users_query(map()) :: Ecto.Query.t()
+  @spec search_users_query(map() | nil) :: {Ecto.Query.t(), number()}
   def search_users_query(opts \\ %{}) do
     search_string = "%" <> Map.get(opts, "search", "") <> "%"
-    size_plus_one = Map.get(opts, "page_size", 10) + 1
+    page_size = Map.get(opts, "page_size", 10)
 
     query =
-      from u in User,
+      from(u in User,
         order_by: [desc: u.inserted_at, desc: u.id],
         where:
           ilike(u.email, ^search_string) or
             ilike(u.display_name, ^search_string),
-        limit: ^size_plus_one
+        limit: ^(page_size + 1)
+      )
+      |> check_pagination_token(opts)
 
-    query
-    |> create_search_clause(opts)
+    {query, page_size}
   end
 
-  @spec create_search_clause(Ecto.Query.t(), map()) :: Ecto.Query.t()
-  defp create_search_clause(query, opts) do
+  @spec check_pagination_token(Ecto.Query.t(), map()) :: Ecto.Query.t()
+  defp check_pagination_token(query, opts) do
     with next_token when not is_nil(next_token) <- Map.get(opts, "next"),
          {:ok, time, id} <- Serializer.decode_token(next_token) do
       query

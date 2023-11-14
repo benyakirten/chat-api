@@ -4,6 +4,7 @@ defmodule ChatApi.Account do
   TODO: Make sure everything fails spectacularly - error handler will take care of it
   """
 
+  alias ChatApi.Serializer
   alias ChatApi.Chat.Conversation
   alias ChatApi.{Repo, Token}
   alias ChatApi.Account.{User, UserToken, UserProfile, UserNotifier}
@@ -428,5 +429,20 @@ defmodule ChatApi.Account do
       {:ok, _} -> {:ok, :signed_out}
       {:error, _changes, _error, _change_atoms} -> {:error, :invalid_token}
     end
+  end
+
+  @spec search_users(map()) :: {[User.t()], binary()}
+  def search_users(opts \\ %{}) do
+    {query, page_size} = User.search_users_query(opts)
+    users = Repo.all(query)
+
+    page_token =
+      with true <- length(users) > page_size, {:ok, last_user} <- Enum.fetch(users, -1) do
+        Serializer.get_next_token(last_user)
+      else
+        _ -> ""
+      end
+
+    {users, page_token}
   end
 end
