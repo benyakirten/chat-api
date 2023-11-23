@@ -267,7 +267,7 @@ defmodule ChatApi.Chat do
   end
 
   @doc """
-  Also verifies that the user is part of the conversation
+  Also verifies that the user is part of the conversation.
   """
   def get_conversation_details(conversation_id, user_id) do
     transaction =
@@ -380,5 +380,13 @@ defmodule ChatApi.Chat do
       {:error, _changes, error, _change_atoms} ->
         {:error, error}
     end
+  end
+
+  @spec get_more_messages(binary(), map()) :: {[Message.t()], pos_integer()}
+  def get_more_messages(conversation_id, opts \\ %{}) do
+    {query, page_size} = Message.paginate_messages_query(conversation_id, opts)
+
+    messages = Repo.all(query)
+    {messages, page_size}
   end
 end

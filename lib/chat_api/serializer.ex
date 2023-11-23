@@ -6,13 +6,8 @@ defmodule ChatApi.Serializer do
   @doc """
   Serialize a list of items and provide a next page token
   """
-  def serialize_all(items, has_next_token) do
-    next_token = case has_next_token do
-      true ->
-        [item] = Enum.take(items, -1)
-        Pagination.get_next_token(item)
-      false -> ""
-    end
+  def serialize_all(items, page_size) do
+    next_token = Pagination.get_next_token(items, page_size)
 
     %{
       items: serialize(items),

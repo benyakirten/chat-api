@@ -431,22 +431,10 @@ defmodule ChatApi.Account do
     end
   end
 
-  @spec search_users(map()) :: {[User.t()], binary()}
+  @spec search_users(map()) :: {[User.t()], pos_integer()}
   def search_users(opts \\ %{}) do
     {query, page_size} = User.search_users_query(opts)
     users = Repo.all(query)
-
-    page_token =
-      with true <- length(users) > page_size, {:ok, last_user} <- Enum.fetch(users, -1) do
-        Pagination.get_next_token(last_user)
-      else
-        _ -> ""
-      end
-
-    {users, page_token}
-  end
-
-  def get_more_conversation_messages do
-    # Conversation must have pagination token, conversation id
+    {users, page_size}
   end
 end
