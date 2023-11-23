@@ -445,4 +445,8 @@ defmodule ChatApi.Account do
 
     {users, page_token}
   end
+
+  def get_more_conversation_messages do
+    # Conversation must have pagination token, conversation id
+  end
 end

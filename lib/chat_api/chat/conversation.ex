@@ -130,13 +130,15 @@ defmodule ChatApi.Chat.Conversation do
   end
 
   def user_conversation_with_details_query(conversation_id, user_id) do
+    {messages_query, _page_size} = Message.paginate_messages_query()
+
     from(
       c in Conversation,
       join: u in assoc(c, :users),
       where: c.id == ^conversation_id and u.id == ^user_id,
       preload: [
         :users,
-        :messages
+        messages: ^messages_query
       ]
     )
   end
