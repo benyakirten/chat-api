@@ -11,7 +11,7 @@ defmodule ChatApi.Serializer do
 
     %{
       items: serialize(items),
-      next: next_token
+      page_token: next_token
     }
   end
 
