@@ -50,6 +50,15 @@ defmodule ChatApiWeb.FallbackController do
     |> render(:error, reason: :invalid_token)
   end
 
+  def call(conn, {:missing_parameters, params}) do
+    IO.inspect(params)
+
+    conn
+    |> put_status(400)
+    |> put_view(json: ChatApiWeb.ChangesetJSON)
+    |> render(:missing_parameters, missing_parameters: params)
+  end
+
   def call(conn, _opts) do
     conn
     |> put_status(400)

@@ -4,7 +4,6 @@ defmodule ChatApi.Account do
   TODO: Make sure everything fails spectacularly - error handler will take care of it
   """
 
-  alias ChatApi.Pagination
   alias ChatApi.Chat.Conversation
   alias ChatApi.{Repo, Token}
   alias ChatApi.Account.{User, UserToken, UserProfile, UserNotifier}
