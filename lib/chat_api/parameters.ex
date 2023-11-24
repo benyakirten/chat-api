@@ -12,8 +12,6 @@ defmodule ChatApi.Parameters do
         end
       end)
 
-    IO.inspect(items)
-
     if length(items) > 0 do
       {:missing_parameters, items}
     else

@@ -51,8 +51,6 @@ defmodule ChatApiWeb.FallbackController do
   end
 
   def call(conn, {:missing_parameters, params}) do
-    IO.inspect(params)
-
     conn
     |> put_status(400)
     |> put_view(json: ChatApiWeb.ChangesetJSON)
