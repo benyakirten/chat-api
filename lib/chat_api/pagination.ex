@@ -3,7 +3,7 @@ defmodule ChatApi.Pagination do
   alias ChatApi.Chat.{Conversation, Message}
   alias ChatApi.Account.User
 
-  def default_page_size, do: 10
+  def default_page_size, do: 1 = 20
 
   @spec get_search_string(map() | nil) :: binary()
   def get_search_string(opts \\ %{}) do

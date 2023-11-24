@@ -176,7 +176,7 @@ defmodule ChatApi.Account.User do
   @doc """
   Get a paginated group of users. Parameters for the opts are:
   1. search - search the display_name or email for the text value (case insensitive)
-  2. page_size - specify a page size (default 10)
+  2. page_size - specify a page size (default 20)
   3. page_token - a pagination token to specify where the searching starts from
 
   ## Examples
