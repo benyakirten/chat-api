@@ -129,9 +129,9 @@ defmodule ChatApi.Chat.Conversation do
     )
   end
 
-  @spec user_conversation_with_details_query(binary(), binary()) :: Ecto.Query.t()
-  def user_conversation_with_details_query(conversation_id, user_id) do
-    {messages_query, _page_size} = Message.paginate_messages_query(conversation_id)
+  @spec user_conversation_with_details_query(binary(), binary(), map() | nil) :: Ecto.Query.t()
+  def user_conversation_with_details_query(conversation_id, user_id, opts \\ %{}) do
+    {messages_query, _page_size} = Message.paginate_messages_query(conversation_id, opts)
 
     from(
       c in Conversation,

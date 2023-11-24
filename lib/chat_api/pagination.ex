@@ -23,7 +23,7 @@ defmodule ChatApi.Pagination do
 
   @spec paginate_from(Ecto.Query.t(), map()) :: Ecto.Query.t()
   def paginate_from(query, opts) do
-    with next_token when not is_nil(next_token) <- Map.get(opts, "next"),
+    with next_token when not is_nil(next_token) <- Map.get(opts, "page_token"),
          {:ok, time, id} <- decode_token(next_token) do
       query |> where([u], {u.inserted_at, u.id} < {^time, ^id})
     else

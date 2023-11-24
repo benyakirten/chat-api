@@ -177,11 +177,11 @@ defmodule ChatApi.Account.User do
   Get a paginated group of users. Parameters for the opts are:
   1. search - search the display_name or email for the text value (case insensitive)
   2. page_size - specify a page size (default 10)
-  3. next - a pagination token to specify where the searching starts from
+  3. page_token - a pagination token to specify where the searching starts from
 
   ## Examples
 
-      iex> {query, page_size} = search_users_query(%{"search" => "john", "page_size" => 5, "next" => "eyJpZCI6IjZmOWI2YzEzLWU0MGYtNGQ5MS05ODkwLTllODE5NmMxOGY5ZSIsImluc2VydGVkX2F0IjoiMjAyMy0xMS0xMyAwMjowNTo0NCJ9"})
+      iex> {query, page_size} = search_users_query(%{"search" => "john", "page_size" => 5, "page_token" => "eyJpZCI6IjZmOWI2YzEzLWU0MGYtNGQ5MS05ODkwLTllODE5NmMxOGY5ZSIsImluc2VydGVkX2F0IjoiMjAyMy0xMS0xMyAwMjowNTo0NCJ9"})
       iex> Repo.all(query)
       [%User{}, ...]
   """

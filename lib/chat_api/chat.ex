@@ -5,6 +5,7 @@ defmodule ChatApi.Chat do
 
   import Ecto.Query
 
+  alias ChatApi.Pagination
   alias ChatApi.Serializer
   alias ChatApi.Repo
 
@@ -382,11 +383,22 @@ defmodule ChatApi.Chat do
     end
   end
 
-  @spec get_more_messages(binary(), map()) :: {[Message.t()], pos_integer()}
-  def get_more_messages(conversation_id, opts \\ %{}) do
-    {query, page_size} = Message.paginate_messages_query(conversation_id, opts)
+  # @spec paginate_more_messages(binary(), binary(), binary(), pos_integer() | nil) ::
+  def paginate_more_messages(
+        conversation_id,
+        user_id,
+        page_token,
+        page_size \\ Pagination.default_page_size()
+      ) do
+    query =
+      Conversation.user_conversation_with_details_query(conversation_id, user_id, %{
+        "page_size" => page_size,
+        "page_token" => page_token
+      })
 
-    messages = Repo.all(query)
-    {messages, page_size}
+    case Repo.one(query) do
+      nil -> {:error, :invalid_conversation}
+      conversation -> {:ok, conversation.messages, page_size}
+    end
   end
 end
