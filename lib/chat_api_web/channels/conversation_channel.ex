@@ -1,6 +1,7 @@
 defmodule ChatApiWeb.ConversationChannel do
   use ChatApiWeb, :channel
 
+  alias ChatApi.Pagination
   alias ChatApiWeb.SystemChannel
   alias ChatApiWeb.UserSocket
   alias ChatApi.Chat
@@ -17,7 +18,7 @@ defmodule ChatApiWeb.ConversationChannel do
           data = %{
             "conversation" => Serializer.serialize(conversation),
             "users" => Serializer.serialize(conversation.users),
-            "messages" => Serializer.serialize(conversation.messages),
+            "messages" => Serializer.serialize_all(conversation.messages, Pagination.default_page_size()),
             "read_times" => read_times
           }
 

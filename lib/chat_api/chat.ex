@@ -5,6 +5,7 @@ defmodule ChatApi.Chat do
 
   import Ecto.Query
 
+  alias ChatApi.Pagination
   alias ChatApi.Serializer
   alias ChatApi.Repo
 
@@ -241,7 +242,7 @@ defmodule ChatApi.Chat do
     transaction =
       Ecto.Multi.new()
       |> Ecto.Multi.run(:get_conversation, fn _repo, _changes ->
-        case Repo.one(Conversation.get_user_group_conversation_query(conversation_id, user_id)) do
+        case Repo.one(Conversation.user_group_conversation_query(conversation_id, user_id)) do
           nil -> {:error, :no_conversation}
           conversation -> {:ok, conversation}
         end
@@ -249,9 +250,9 @@ defmodule ChatApi.Chat do
       |> Ecto.Multi.run(:remove_conversation, fn _repo, %{get_conversation: conversation} ->
         query =
           if length(conversation.users) > 1 do
-            Conversation.get_users_conversations_query(conversation.id, user_id)
+            Conversation.users_conversations_query(conversation.id, user_id)
           else
-            Conversation.get_conversation(conversation.id)
+            Conversation.conversation_by_id_query(conversation.id)
           end
 
         case Repo.delete_all(query) do
@@ -267,14 +268,14 @@ defmodule ChatApi.Chat do
   end
 
   @doc """
-  Also verifies that the user is part of the conversation
+  Also verifies that the user is part of the conversation.
   """
   def get_conversation_details(conversation_id, user_id) do
     transaction =
       Ecto.Multi.new()
       |> return_error_on_no_results(
         :get_conversation,
-        Conversation.get_user_conversation_with_details_query(conversation_id, user_id),
+        Conversation.user_conversation_with_details_query(conversation_id, user_id),
         :no_conversation
       )
       |> Ecto.Multi.run(:get_read_times, fn _repo, _changes ->
@@ -307,7 +308,7 @@ defmodule ChatApi.Chat do
       Ecto.Multi.new()
       |> return_error_on_no_results(
         :get_conversation,
-        Conversation.get_conversation(conversation_id),
+        Conversation.conversation_by_id_query(conversation_id),
         :no_conversation
       )
       |> Ecto.Multi.run(:update_conversation_alias, fn _repo, %{get_conversation: conversation} ->
@@ -329,7 +330,7 @@ defmodule ChatApi.Chat do
   def update_read_time(conversation_id, user_id) do
     result =
       Repo.update_all(
-        Conversation.get_users_conversations_query(conversation_id, user_id),
+        Conversation.users_conversations_query(conversation_id, user_id),
         set: [last_read: DateTime.utc_now()]
       )
 
@@ -344,7 +345,7 @@ defmodule ChatApi.Chat do
       Ecto.Multi.new()
       |> return_error_on_no_results(
         :get_conversation,
-        Conversation.get_private_conversation(conversation_id),
+        Conversation.private_conversation_query(conversation_id),
         :no_conversation
       )
       |> Ecto.Multi.run(:get_users, fn _repo, %{get_conversation: conversation} ->
@@ -379,6 +380,25 @@ defmodule ChatApi.Chat do
 
       {:error, _changes, error, _change_atoms} ->
         {:error, error}
+    end
+  end
+
+  # @spec paginate_more_messages(binary(), binary(), binary(), pos_integer() | nil) ::
+  def paginate_more_messages(
+        conversation_id,
+        user_id,
+        page_token,
+        page_size \\ Pagination.default_page_size()
+      ) do
+    query =
+      Conversation.user_conversation_with_details_query(conversation_id, user_id, %{
+        "page_size" => page_size,
+        "page_token" => page_token
+      })
+
+    case Repo.one(query) do
+      nil -> {:error, :invalid_conversation}
+      conversation -> {:ok, conversation.messages, page_size}
     end
   end
 end

@@ -5,6 +5,7 @@ defmodule ChatApi.Account.User do
 
   alias ChatApi.Chat.Message
   alias ChatApi.Account.{UserProfile, UserToken, User}
+  alias ChatApi.Pagination
 
   @type t :: %__MODULE__{
           email: String.t(),
@@ -13,7 +14,6 @@ defmodule ChatApi.Account.User do
           confirmed_at: NaiveDateTime | nil,
           display_name: String.t()
         }
-
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "users" do
@@ -171,5 +171,35 @@ defmodule ChatApi.Account.User do
 
   def user_with_different_name_query(user_id, display_name) do
     from(u in User, where: u.id == ^user_id and u.display_name != ^display_name)
+  end
+
+  @doc """
+  Get a paginated group of users. Parameters for the opts are:
+  1. search - search the display_name or email for the text value (case insensitive)
+  2. page_size - specify a page size (default 20)
+  3. page_token - a pagination token to specify where the searching starts from
+
+  ## Examples
+
+      iex> {query, page_size} = search_users_query(%{"search" => "john", "page_size" => 5, "page_token" => "eyJpZCI6IjZmOWI2YzEzLWU0MGYtNGQ5MS05ODkwLTllODE5NmMxOGY5ZSIsImluc2VydGVkX2F0IjoiMjAyMy0xMS0xMyAwMjowNTo0NCJ9"})
+      iex> Repo.all(query)
+      [%User{}, ...]
+  """
+  @spec search_users_query(binary(), map() | nil) :: {Ecto.Query.t(), number()}
+  def search_users_query(user_id, opts \\ %{}) do
+    search_string = Pagination.get_search_string(opts)
+    page_size = Pagination.get_page_size(opts)
+
+    query =
+      from(u in User,
+        where:
+          ilike(u.email, ^search_string) or
+            ilike(u.display_name, ^search_string)
+      )
+      |> where([u], u.id != ^user_id)
+      |> Pagination.add_seek_pagination(page_size)
+      |> Pagination.paginate_from(opts)
+
+    {query, page_size}
   end
 end

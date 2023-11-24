@@ -102,7 +102,7 @@ defmodule ChatApi.Chat.Conversation do
     )
   end
 
-  def get_user_group_conversation_query(conversation_id, user_id) do
+  def user_group_conversation_query(conversation_id, user_id) do
     from(c in Conversation,
       join: u in assoc(c, :users),
       where: c.private == ^false and c.id == ^conversation_id and u.id == ^user_id,
@@ -110,15 +110,18 @@ defmodule ChatApi.Chat.Conversation do
     )
   end
 
-  def get_conversation(conversation_id) do
+  def conversation_by_id_query(conversation_id) do
     from(c in Conversation, where: c.id == ^conversation_id)
   end
 
-  def get_private_conversation(conversation_id) do
-    from(c in Conversation, where: c.id == ^conversation_id and c.private == ^false, preload: :users)
+  def private_conversation_query(conversation_id) do
+    from(c in Conversation,
+      where: c.id == ^conversation_id and c.private == ^false,
+      preload: :users
+    )
   end
 
-  def get_users_conversations_query(conversation_id, user_id) do
+  def users_conversations_query(conversation_id, user_id) do
     [conversation_binary_id, user_binary_id] = convert_uuids_to_binary([conversation_id, user_id])
 
     from(uc in "users_conversations",
@@ -126,14 +129,17 @@ defmodule ChatApi.Chat.Conversation do
     )
   end
 
-  def get_user_conversation_with_details_query(conversation_id, user_id) do
+  @spec user_conversation_with_details_query(binary(), binary(), map() | nil) :: Ecto.Query.t()
+  def user_conversation_with_details_query(conversation_id, user_id, opts \\ %{}) do
+    {messages_query, _page_size} = Message.paginate_messages_query(conversation_id, opts)
+
     from(
       c in Conversation,
       join: u in assoc(c, :users),
       where: c.id == ^conversation_id and u.id == ^user_id,
       preload: [
         :users,
-        :messages
+        messages: ^messages_query
       ]
     )
   end

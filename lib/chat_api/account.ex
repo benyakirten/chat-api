@@ -271,7 +271,7 @@ defmodule ChatApi.Account do
       end)
       |> Ecto.Multi.run(
         :conversation_users,
-        fn _repo, %{conversations: conversations, verify_token: {user, _}} ->
+        fn _repo, %{conversations: conversations, verify_token: {user, _token}} ->
           unique_users =
             Repo.all(Conversation.unique_users_for_conversations_query(conversations, user.id))
 
@@ -428,5 +428,12 @@ defmodule ChatApi.Account do
       {:ok, _} -> {:ok, :signed_out}
       {:error, _changes, _error, _change_atoms} -> {:error, :invalid_token}
     end
+  end
+
+  @spec search_users(binary(), map() | nil) :: {[User.t()], pos_integer()}
+  def search_users(user_id, opts \\ %{}) do
+    {query, page_size} = User.search_users_query(user_id, opts)
+    users = Repo.all(query)
+    {users, page_size}
   end
 end

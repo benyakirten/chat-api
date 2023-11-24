@@ -1,7 +1,7 @@
 defmodule ChatApiWeb.ProfileJSON do
-  @doc """
+  @moduledoc """
   Renders changes to the user's profile. Separate from the auth controller
-  because they require a token and the pipeline is
+  because profile changes require an auth token.
   """
   alias ChatApi.Serializer
 

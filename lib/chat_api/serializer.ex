@@ -1,6 +1,19 @@
 defmodule ChatApi.Serializer do
+  alias ChatApi.Pagination
   alias ChatApi.Chat.{Conversation, Message}
   alias ChatApi.Account.{User, UserProfile}
+
+  @doc """
+  Serialize a list of items and provide a next page token
+  """
+  def serialize_all(items, page_size) do
+    next_token = Pagination.get_next_token(items, page_size)
+
+    %{
+      items: serialize(items),
+      page_token: next_token
+    }
+  end
 
   def serialize([head | tail]) do
     [serialize(head) | serialize(tail)]

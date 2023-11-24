@@ -25,6 +25,8 @@ defmodule ChatApiWeb.Router do
 
   scope "/api", ChatApiWeb do
     pipe_through(:api)
+    get("/messages", ApiController, :get_messages)
+    get("/users", ApiController, :get_users)
     post("/signout", ProfileController, :signout)
     post("/signout_all", ProfileController, :signout_all)
     post("/token/email_confirm", ProfileController, :request_new_confirmation_token)
