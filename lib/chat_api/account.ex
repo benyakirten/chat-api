@@ -430,9 +430,9 @@ defmodule ChatApi.Account do
     end
   end
 
-  @spec search_users(map()) :: {[User.t()], pos_integer()}
-  def search_users(opts \\ %{}) do
-    {query, page_size} = User.search_users_query(opts)
+  @spec search_users(binary(), map() | nil) :: {[User.t()], pos_integer()}
+  def search_users(user_id, opts \\ %{}) do
+    {query, page_size} = User.search_users_query(user_id, opts)
     users = Repo.all(query)
     {users, page_size}
   end

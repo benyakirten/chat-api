@@ -185,8 +185,8 @@ defmodule ChatApi.Account.User do
       iex> Repo.all(query)
       [%User{}, ...]
   """
-  @spec search_users_query(map() | nil) :: {Ecto.Query.t(), number()}
-  def search_users_query(opts \\ %{}) do
+  @spec search_users_query(binary(), map() | nil) :: {Ecto.Query.t(), number()}
+  def search_users_query(user_id, opts \\ %{}) do
     search_string = Pagination.get_search_string(opts)
     page_size = Pagination.get_page_size(opts)
 
@@ -196,6 +196,7 @@ defmodule ChatApi.Account.User do
           ilike(u.email, ^search_string) or
             ilike(u.display_name, ^search_string)
       )
+      |> where([u], u.id != ^user_id)
       |> Pagination.add_seek_pagination(page_size)
       |> Pagination.paginate_from(opts)
 
