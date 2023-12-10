@@ -41,8 +41,8 @@ defmodule ChatApi.Chat.EncryptionKey do
     field(:qi, :binary)
     field(:type, :binary)
 
-    has_one(:user, User)
-    has_one(:conversation, Conversation)
+    belongs_to(:user, User)
+    belongs_to(:conversation, Conversation)
 
     timestamps()
   end
