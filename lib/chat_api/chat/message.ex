@@ -13,7 +13,7 @@ defmodule ChatApi.Chat.Message do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "messages" do
-    field :content, :string
+    field(:content, :string)
 
     belongs_to(:user, User)
     belongs_to(:conversation, Conversation)

@@ -3,7 +3,7 @@ defmodule ChatApiWeb.ApiController do
   alias ChatApi.{Pagination, Chat}
   use ChatApiWeb, :controller
 
-  action_fallback ChatApiWeb.FallbackController
+  action_fallback(ChatApiWeb.FallbackController)
 
   def get_messages(%Plug.Conn{assigns: %{user_id: user_id}} = conn, _body) do
     page_token = Map.get(conn.query_params, "page_token", "")

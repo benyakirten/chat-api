@@ -4,7 +4,7 @@ defmodule ChatApiWeb.ProfileController do
   alias ChatApiWeb.AuthController
   alias ChatApi.Account
 
-  action_fallback ChatApiWeb.FallbackController
+  action_fallback(ChatApiWeb.FallbackController)
 
   def update_password(
         %Plug.Conn{assigns: %{user_id: user_id}} = conn,

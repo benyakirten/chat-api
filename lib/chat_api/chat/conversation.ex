@@ -16,8 +16,8 @@ defmodule ChatApi.Chat.Conversation do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "conversations" do
-    field :alias, :string
-    field :private, :boolean, default: false
+    field(:alias, :string)
+    field(:private, :boolean, default: false)
 
     many_to_many(:users, User, join_through: "users_conversations", on_replace: :delete)
     has_many(:messages, Message)
@@ -80,11 +80,12 @@ defmodule ChatApi.Chat.Conversation do
           where: c.private == true,
           join:
             uc in subquery(
-              from uc in "users_conversations",
+              from(uc in "users_conversations",
                 where: uc.user_id in ^user_ids,
                 group_by: uc.conversation_id,
                 select: uc.conversation_id,
                 having: count(uc.user_id) == ^length(user_ids)
+              )
             ),
           on: c.id == uc.conversation_id,
           group_by: c.id

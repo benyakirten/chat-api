@@ -18,7 +18,8 @@ defmodule ChatApiWeb.ConversationChannel do
           data = %{
             "conversation" => Serializer.serialize(conversation),
             "users" => Serializer.serialize(conversation.users),
-            "messages" => Serializer.serialize_all(conversation.messages, Pagination.default_page_size()),
+            "messages" =>
+              Serializer.serialize_all(conversation.messages, Pagination.default_page_size()),
             "read_times" => read_times
           }
 
