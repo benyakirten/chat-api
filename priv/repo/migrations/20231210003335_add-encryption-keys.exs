@@ -5,7 +5,7 @@ defmodule :"Elixir.ChatApi.Repo.Migrations.Add-encryption-keys" do
     # JWK encoded crypto key
     # https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key
     """
-    Example of the such a key:
+    Example of the such a key for the RSA-OAEP algorithm with sha256 hashing:
     {
       alg: "RSA-OAEP-256",
       d: "AlLh-5E74d0TRf0lBcKU25LSwgG43jmdOEGivbsDHHmastztsV-0TurL0mPYaGI4pDGHLU_D0VywR48dCJdQKALCDLbGIBzKBmrNBwknGRlnZ033Paz-qzzUMxNNPCGpI7nBbfUNwmWSHlgMUijuiEEfPOGXfTXXXIdEzjFCgOV7oin7bdoH4mkph506cdgyOpHFkVHPCHc8zKEJtaVI3HNmIORALgMOVtTIMECAiCa_pk2Cyp4g9t8n7Pt4z7HyOaAt-x9YjzRSIFAfa5jwx-WDjh9U7_Yz4hjkLdzlS-FKahsaoazrM7kOimHlXeVpqJjWfkfdywXB7iW2PLN80Q",
@@ -34,16 +34,21 @@ defmodule :"Elixir.ChatApi.Repo.Migrations.Add-encryption-keys" do
       add(:p, :string, null: false)
       add(:q, :string, null: false)
       add(:qi, :string, null: false)
-    end
+      add(:type, :string, null: false)
 
-    alter table(:users_conversations) do
-      add(:public_key, references(:encryption_keys, type: :binary_id, on_delete: :delete_all),
+      # This table has the foreign keys so we can cascade the delete
+      add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all), null: false)
+
+      add(:conversation_id, references(:conversations, type: :binary_id, on_delete: :delete_all),
         null: false
       )
-
-      add(:private_key, references(:encryption_keys, type: :binary_id, on_delete: :delete_all),
-        null: false
-      )
     end
+
+    create index(:encryption_keys, [:type])
+    create unique_index(:encryption_keys, [:user_id, :conversation_id, :type])
+
+    create constraint(:encryption_keys, :public_or_private_type,
+             check: "type = 'private' or type = 'public'"
+           )
   end
 end
