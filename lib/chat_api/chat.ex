@@ -153,6 +153,8 @@ defmodule ChatApi.Chat do
         private,
         first_message_content,
         first_message_sender,
+        public_key,
+        private_key,
         conversation_alias \\ nil
       ) do
     user_ids =

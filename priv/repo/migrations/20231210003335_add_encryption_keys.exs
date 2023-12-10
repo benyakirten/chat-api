@@ -36,15 +36,19 @@ defmodule :"Elixir.ChatApi.Repo.Migrations.Add-encryption-keys" do
       add(:qi, :string, null: false)
       add(:type, :string, null: false)
 
-      # This table has the foreign keys so we can cascade the delete
+      # This table has the foreign keys so we can cascade the delete.
       add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all), null: false)
 
       add(:conversation_id, references(:conversations, type: :binary_id, on_delete: :delete_all),
         null: false
       )
+
+      timestamps()
     end
 
     create index(:encryption_keys, [:type])
+
+    # Between the constraint and the unique index, we can enforce that a user can only have a private and public key.
     create unique_index(:encryption_keys, [:user_id, :conversation_id, :type])
 
     create constraint(:encryption_keys, :public_or_private_type,

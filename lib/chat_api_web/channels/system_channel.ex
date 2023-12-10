@@ -82,7 +82,9 @@ defmodule ChatApiWeb.SystemChannel do
       "user_ids" => user_ids,
       "private" => private,
       "message" => first_message_content,
-      "token" => token
+      "token" => token,
+      "public_key" => public_key,
+      "private_key" => private_key
     } = payload
 
     conversation_alias = Map.get(payload, "alias", nil)
@@ -93,6 +95,8 @@ defmodule ChatApiWeb.SystemChannel do
              private,
              first_message_content,
              socket.assigns.user_id,
+             public_key,
+             private_key,
              conversation_alias
            ) do
         {:error, reason} ->
