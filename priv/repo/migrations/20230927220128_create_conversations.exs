@@ -3,8 +3,8 @@ defmodule ChatApi.Repo.Migrations.CreateConversations do
 
   def change do
     create table(:conversations) do
-      add :private, :boolean, default: false, null: false
-      add :alias, :string
+      add(:private, :boolean, default: false, null: false)
+      add(:alias, :string)
 
       timestamps()
     end
@@ -19,8 +19,8 @@ defmodule ChatApi.Repo.Migrations.CreateConversations do
       add(:last_read, :utc_datetime)
     end
 
-    create index(:users_conversations, [:conversation_id])
-    create index(:users_conversations, [:user_id])
-    create unique_index(:users_conversations, [:user_id, :conversation_id])
+    create(index(:users_conversations, [:conversation_id]))
+    create(index(:users_conversations, [:user_id]))
+    create(unique_index(:users_conversations, [:user_id, :conversation_id]))
   end
 end

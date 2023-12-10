@@ -46,13 +46,15 @@ defmodule :"Elixir.ChatApi.Repo.Migrations.Add-encryption-keys" do
       timestamps()
     end
 
-    create index(:encryption_keys, [:type])
+    create(index(:encryption_keys, [:type]))
 
     # Between the constraint and the unique index, we can enforce that a user can only have a private and public key.
-    create unique_index(:encryption_keys, [:user_id, :conversation_id, :type])
+    create(unique_index(:encryption_keys, [:user_id, :conversation_id, :type]))
 
-    create constraint(:encryption_keys, :public_or_private_type,
-             check: "type = 'private' or type = 'public'"
-           )
+    create(
+      constraint(:encryption_keys, :public_or_private_type,
+        check: "type = 'private' or type = 'public'"
+      )
+    )
   end
 end
