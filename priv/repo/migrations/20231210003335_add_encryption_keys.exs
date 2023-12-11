@@ -23,18 +23,19 @@ defmodule :"Elixir.ChatApi.Repo.Migrations.Add-encryption-keys" do
     """
 
     create table(:encryption_keys) do
-      add(:alg, :string, null: false)
-      add(:d, :string, null: false)
-      add(:dp, :string, null: false)
-      add(:e, :string, null: false)
+      add(:alg, :text, null: false)
+      add(:d, :text, null: false)
+      add(:dp, :text, null: false)
+      add(:dq, :text, null: false)
+      add(:e, :text, null: false)
       add(:ext, :boolean, null: false)
-      add(:key_ops, {:array, :string}, null: false)
-      add(:kty, :string, null: false)
-      add(:n, :string, null: false)
-      add(:p, :string, null: false)
-      add(:q, :string, null: false)
-      add(:qi, :string, null: false)
-      add(:type, :string, null: false)
+      add(:key_ops, {:array, :text}, null: false)
+      add(:kty, :text, null: false)
+      add(:n, :text, null: false)
+      add(:p, :text, null: false)
+      add(:q, :text, null: false)
+      add(:qi, :text, null: false)
+      add(:type, :text, null: false)
 
       # This table has the foreign keys so we can cascade the delete.
       add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all), null: false)

@@ -5,11 +5,8 @@ defmodule ChatApi.Chat do
 
   import Ecto.Query
 
-  alias ChatApi.Pagination
-  alias ChatApi.Serializer
-  alias ChatApi.Repo
-
-  alias ChatApi.Chat.{Conversation, Message}
+  alias ChatApi.{Pagination, Serializer, Repo}
+  alias ChatApi.Chat.{Conversation, Message, EncryptionKey}
   alias ChatApi.Account.User
 
   @doc """
@@ -29,6 +26,8 @@ defmodule ChatApi.Chat do
         user_ids,
         message_content,
         message_sender,
+        public_key,
+        private_key,
         private \\ false,
         conversation_alias \\ nil
       ) do
@@ -37,8 +36,6 @@ defmodule ChatApi.Chat do
       :create_conversation,
       Conversation.changeset(%Conversation{private: private, alias: conversation_alias})
     )
-    # Repo.preload gives errors in IEX - This is a temporary measure to preload the users
-    # While debugging the query
     |> Ecto.Multi.run(:get_conversation, fn _repo, %{create_conversation: conversation} ->
       convo = Repo.one(from(c in Conversation, where: c.id == ^conversation.id, preload: :users))
 
@@ -52,27 +49,50 @@ defmodule ChatApi.Chat do
       User.user_by_id_query(message_sender),
       :user_not_found
     )
-    |> Ecto.Multi.run(:add_message, fn _repo,
-                                       %{get_conversation: conversation, get_sender: user} ->
-      %Message{}
-      |> Message.changeset(%{content: message_content})
-      |> Ecto.Changeset.put_assoc(:user, user)
-      |> Ecto.Changeset.put_assoc(:conversation, conversation)
-      |> Repo.insert()
-    end)
-    |> Ecto.Multi.all(:get_users, from(u in User, where: u.id in ^user_ids, select: u))
-    |> Ecto.Multi.run(:apply_users, fn _repo,
-                                       %{get_users: users, get_conversation: conversation} ->
-      # Make sure all the user ids correspond to users
-      if length(users) == length(user_ids) do
-        conversation
-        |> Conversation.changeset()
-        |> Ecto.Changeset.put_assoc(:users, users)
-        |> Repo.update()
-      else
-        {:error, :invalid_ids}
+    |> Ecto.Multi.run(
+      :add_keys,
+      fn _repo, %{get_conversation: conversation, get_sender: user} ->
+        public_key_changeset =
+          %EncryptionKey{}
+          |> EncryptionKey.changeset(user, conversation, Map.put(public_key, "type", "public"))
+
+        private_key_changeset =
+          %EncryptionKey{}
+          |> EncryptionKey.changeset(user, conversation, Map.put(private_key, "type", "private"))
+
+        with {:ok, public_key} <- Repo.insert(public_key_changeset),
+             {:ok, private_key} <- Repo.insert(private_key_changeset) do
+          {:ok, {public_key, private_key}}
+        else
+          error -> error
+        end
       end
-    end)
+    )
+    |> Ecto.Multi.run(
+      :add_message,
+      fn _repo, %{get_conversation: conversation, get_sender: user} ->
+        %Message{}
+        |> Message.changeset(%{content: message_content})
+        |> Ecto.Changeset.put_assoc(:user, user)
+        |> Ecto.Changeset.put_assoc(:conversation, conversation)
+        |> Repo.insert()
+      end
+    )
+    |> Ecto.Multi.all(:get_users, from(u in User, where: u.id in ^user_ids, select: u))
+    |> Ecto.Multi.run(
+      :apply_users,
+      fn _repo, %{get_users: users, get_conversation: conversation} ->
+        # Make sure all the user ids correspond to users
+        if length(users) == length(user_ids) do
+          conversation
+          |> Conversation.changeset()
+          |> Ecto.Changeset.put_assoc(:users, users)
+          |> Repo.update()
+        else
+          {:error, :invalid_ids}
+        end
+      end
+    )
   end
 
   def update_message(message_id, user_id, content) do
@@ -163,17 +183,32 @@ defmodule ChatApi.Chat do
         else: user_ids
 
     if private,
-      do: start_private_chat(user_ids, first_message_content, first_message_sender),
+      do:
+        start_private_chat(
+          user_ids,
+          first_message_content,
+          first_message_sender,
+          public_key,
+          private_key
+        ),
       else:
         start_group_chat(
           user_ids,
           first_message_content,
           first_message_sender,
+          public_key,
+          private_key,
           conversation_alias
         )
   end
 
-  defp start_private_chat(user_ids, first_message_content, first_message_sender) do
+  defp start_private_chat(
+         user_ids,
+         first_message_content,
+         first_message_sender,
+         public_key,
+         private_key
+       ) do
     if length(user_ids) != 2 do
       {:error, :incorrect_num_users}
     else
@@ -189,7 +224,13 @@ defmodule ChatApi.Chat do
               {:error, error}
 
             {:ok, %{get_conversation: nil}} ->
-              start_new_private_chat(user_ids, first_message_content, first_message_sender)
+              start_new_private_chat(
+                user_ids,
+                first_message_content,
+                first_message_sender,
+                public_key,
+                private_key
+              )
 
             {:ok, %{get_conversation: conversation}} ->
               use_preexisting_private_conversation(
@@ -208,17 +249,39 @@ defmodule ChatApi.Chat do
     |> get_conversation_users_from_multi_results()
   end
 
-  defp start_new_private_chat(user_ids, first_message_content, first_message_sender) do
-    new_conversation(user_ids, first_message_content, first_message_sender, true)
-    |> Repo.transaction()
-    |> get_conversation_users_from_multi_results()
-  end
-
-  defp start_group_chat(user_ids, first_message_content, first_message_sender, conversation_alias) do
+  defp start_new_private_chat(
+         user_ids,
+         first_message_content,
+         first_message_sender,
+         public_key,
+         private_key
+       ) do
     new_conversation(
       user_ids,
       first_message_content,
       first_message_sender,
+      public_key,
+      private_key,
+      true
+    )
+    |> Repo.transaction()
+    |> get_conversation_users_from_multi_results()
+  end
+
+  defp start_group_chat(
+         user_ids,
+         first_message_content,
+         first_message_sender,
+         public_key,
+         private_key,
+         conversation_alias
+       ) do
+    new_conversation(
+      user_ids,
+      first_message_content,
+      first_message_sender,
+      public_key,
+      private_key,
       false,
       conversation_alias
     )
@@ -364,15 +427,18 @@ defmodule ChatApi.Chat do
           {:error, :users_not_found}
         end
       end)
-      |> Ecto.Multi.run(:update_conversation, fn _repo,
-                                                 %{
-                                                   get_conversation: conversation,
-                                                   get_users: users
-                                                 } ->
-        Conversation.changeset(conversation, %{alias: new_alias})
-        |> Ecto.Changeset.put_assoc(:users, users)
-        |> Repo.update()
-      end)
+      |> Ecto.Multi.run(
+        :update_conversation,
+        fn _repo,
+           %{
+             get_conversation: conversation,
+             get_users: users
+           } ->
+          Conversation.changeset(conversation, %{alias: new_alias})
+          |> Ecto.Changeset.put_assoc(:users, users)
+          |> Repo.update()
+        end
+      )
 
     case Repo.transaction(transaction) do
       {:ok, changes} ->
