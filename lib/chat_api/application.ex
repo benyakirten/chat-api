@@ -18,9 +18,10 @@ defmodule ChatApi.Application do
       {Finch, name: ChatApi.Finch},
       # Start the Endpoint (http/https)
       ChatApiWeb.Endpoint,
-      ChatApiWeb.Presence
+      ChatApiWeb.Presence,
       # Start a worker by calling: ChatApi.Worker.start_link(arg)
       # {ChatApi.Worker, arg}
+      ChatApi.Vault
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

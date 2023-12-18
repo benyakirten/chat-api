@@ -12,7 +12,7 @@ defmodule ChatApi.Chat.EncryptionKey do
   An example of data given might be:
   ```
   %{
-  "alg" => "RSA-OAEP-257",
+  "alg" => "RSA-OAEP-256",
   "d" =>
     "AlLh-5E74d0TRf0lBcKU25LSwgG43jmdOEGivbsDHHmastztsV-0TurL0mPYaGI4pDGHLU_D0VywR48dCJdQKALCDLbGIBzKBmrNBwknGRlnZ033Paz-qzzUMxNNPCGpI7nBbfUNwmWSHlgMUijuiEEfPOGXfTXXXIdEzjFCgOV7oin7bdoH4mkph506cdgyOpHFkVHPCHc8zKEJtaVI3HNmIORALgMOVtTIMECAiCa_pk2Cyp4g9t8n7Pt4z7HyOaAt-x9YjzRSIFAfa5jwx-WDjh9U7_Yz4hjkLdzlS-FKahsaoazrM7kOimHlXeVpqJjWfkfdywXB7iW2PLN80Q",
   "dp" =>
