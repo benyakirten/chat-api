@@ -1,5 +1,5 @@
 defmodule ChatApi.Chat.Conversation do
-  alias ChatApi.Chat.{Message, Conversation}
+  alias ChatApi.Chat.{Message, Conversation, EncryptionKey}
   alias ChatApi.Account.User
 
   use Ecto.Schema
@@ -122,7 +122,11 @@ defmodule ChatApi.Chat.Conversation do
       where: c.id == ^conversation_id and u.id == ^user_id,
       preload: [
         :users,
-        messages: ^messages_query
+        messages: ^messages_query,
+        public_key:
+          ^EncryptionKey.get_public_encryption_key_for_conversation(conversation_id, user_id),
+        private_key:
+          ^EncryptionKey.get_private_encryption_key_for_conversation(conversation_id, user_id)
       ]
     )
   end

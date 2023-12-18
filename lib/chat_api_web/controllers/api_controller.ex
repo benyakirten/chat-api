@@ -26,9 +26,10 @@ defmodule ChatApiWeb.ApiController do
   end
 
   def check_private_conversation(
-        %Plug.Conn{assigns: %{user_id: user_id}, query_params: query_params} = conn,
+        %Plug.Conn{assigns: %{user_id: user_id}, params: params} = conn,
         _body
       ) do
-    # TODO: Implement this
+    conversation = Chat.private_conversation(user_id, params["user_id"])
+    render(conn, :private_conversation, conversation: conversation)
   end
 end

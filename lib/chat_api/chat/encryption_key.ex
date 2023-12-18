@@ -88,4 +88,20 @@ defmodule ChatApi.Chat.EncryptionKey do
       where: k.user_id == ^user_id and k.conversation_id == ^conversation_id and k.type == ^type
     )
   end
+
+  def get_private_encryption_key_for_conversation(user_id, conversation_id) do
+    from(
+      k in EncryptionKey,
+      where:
+        k.user_id == ^user_id and k.conversation_id == ^conversation_id and k.type == ^"private"
+    )
+  end
+
+  def get_public_encryption_key_for_conversation(user_id, conversation_id) do
+    from(
+      k in EncryptionKey,
+      where:
+        k.user_id != ^user_id and k.conversation_id == ^conversation_id and k.type == ^"public"
+    )
+  end
 end

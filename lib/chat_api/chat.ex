@@ -181,16 +181,6 @@ defmodule ChatApi.Chat do
         user_ids,
         conversation_alias \\ nil
       ) do
-    start_group_chat(
-      user_ids,
-      conversation_alias
-    )
-  end
-
-  defp start_group_chat(
-         user_ids,
-         conversation_alias
-       ) do
     new_conversation(
       user_ids,
       %{private: false, alias: conversation_alias}
@@ -378,5 +368,10 @@ defmodule ChatApi.Chat do
       nil -> {:error, :invalid_conversation}
       conversation -> {:ok, conversation.messages, page_size}
     end
+  end
+
+  @spec private_conversation(binary(), binary()) :: nil | Conversation.t()
+  def private_conversation(user_id1, user_id2) do
+    Conversation.find_private_conversation_by_users_query(user_id1, user_id2) |> Repo.one()
   end
 end
