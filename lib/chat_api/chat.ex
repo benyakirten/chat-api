@@ -24,13 +24,10 @@ defmodule ChatApi.Chat do
 
   def new_conversation(
         user_ids,
-        message_content,
-        message_sender,
-        public_key,
-        private_key,
         private \\ false,
         conversation_alias \\ nil
       ) do
+    # Change private and conversation to map with private Map.get
     Ecto.Multi.new()
     |> Ecto.Multi.insert(
       :create_conversation,
@@ -44,40 +41,6 @@ defmodule ChatApi.Chat do
         convo -> {:ok, convo}
       end
     end)
-    |> return_error_on_no_results(
-      :get_sender,
-      User.user_by_id_query(message_sender),
-      :user_not_found
-    )
-    |> Ecto.Multi.run(
-      :add_keys,
-      fn _repo, %{get_conversation: conversation, get_sender: user} ->
-        public_key_changeset =
-          %EncryptionKey{}
-          |> EncryptionKey.changeset(user, conversation, Map.put(public_key, "type", "public"))
-
-        private_key_changeset =
-          %EncryptionKey{}
-          |> EncryptionKey.changeset(user, conversation, Map.put(private_key, "type", "private"))
-
-        with {:ok, public_key} <- Repo.insert(public_key_changeset),
-             {:ok, private_key} <- Repo.insert(private_key_changeset) do
-          {:ok, {public_key, private_key}}
-        else
-          error -> error
-        end
-      end
-    )
-    |> Ecto.Multi.run(
-      :add_message,
-      fn _repo, %{get_conversation: conversation, get_sender: user} ->
-        %Message{}
-        |> Message.changeset(%{content: message_content})
-        |> Ecto.Changeset.put_assoc(:user, user)
-        |> Ecto.Changeset.put_assoc(:conversation, conversation)
-        |> Repo.insert()
-      end
-    )
     |> Ecto.Multi.all(:get_users, from(u in User, where: u.id in ^user_ids, select: u))
     |> Ecto.Multi.run(
       :apply_users,
@@ -168,44 +131,30 @@ defmodule ChatApi.Chat do
     end)
   end
 
-  def start_conversation(
+  def start_private_conversation(
         user_ids,
-        private,
-        first_message_content,
-        first_message_sender,
         public_key,
-        private_key,
+        private_key
+      ) do
+    start_private_chat(
+      user_ids,
+      public_key,
+      private_key
+    )
+  end
+
+  def start_group_conversation(
+        user_ids,
         conversation_alias \\ nil
       ) do
-    user_ids =
-      if first_message_sender not in user_ids,
-        do: Enum.concat(user_ids, [first_message_sender]),
-        else: user_ids
-
-    if private,
-      do:
-        start_private_chat(
-          user_ids,
-          first_message_content,
-          first_message_sender,
-          public_key,
-          private_key
-        ),
-      else:
-        start_group_chat(
-          user_ids,
-          first_message_content,
-          first_message_sender,
-          public_key,
-          private_key,
-          conversation_alias
-        )
+    start_group_chat(
+      user_ids,
+      conversation_alias
+    )
   end
 
   defp start_private_chat(
          user_ids,
-         first_message_content,
-         first_message_sender,
          public_key,
          private_key
        ) do
@@ -226,43 +175,44 @@ defmodule ChatApi.Chat do
             {:ok, %{get_conversation: nil}} ->
               start_new_private_chat(
                 user_ids,
-                first_message_content,
-                first_message_sender,
                 public_key,
                 private_key
               )
 
-            {:ok, %{get_conversation: conversation}} ->
-              use_preexisting_private_conversation(
-                conversation.id,
-                first_message_sender,
-                first_message_content
-              )
+            {:ok, %{get_conversation: _conversation}} ->
+              {:error, :conversation_already_exists}
           end
       end
     end
   end
 
-  defp use_preexisting_private_conversation(conversation_id, message_sender, message_content) do
-    send_conversation_message(conversation_id, message_sender, message_content)
-    |> Repo.transaction()
-    |> get_conversation_users_from_multi_results()
-  end
-
   defp start_new_private_chat(
          user_ids,
-         first_message_content,
-         first_message_sender,
          public_key,
          private_key
        ) do
     new_conversation(
       user_ids,
-      first_message_content,
-      first_message_sender,
-      public_key,
-      private_key,
       true
+    )
+    |> Ecto.Multi.run(
+      :add_keys,
+      fn _repo, %{get_conversation: conversation, get_sender: user} ->
+        public_key_changeset =
+          %EncryptionKey{}
+          |> EncryptionKey.changeset(user, conversation, Map.put(public_key, "type", "public"))
+
+        private_key_changeset =
+          %EncryptionKey{}
+          |> EncryptionKey.changeset(user, conversation, Map.put(private_key, "type", "private"))
+
+        with {:ok, public_key} <- Repo.insert(public_key_changeset),
+             {:ok, private_key} <- Repo.insert(private_key_changeset) do
+          {:ok, {public_key, private_key}}
+        else
+          error -> error
+        end
+      end
     )
     |> Repo.transaction()
     |> get_conversation_users_from_multi_results()
@@ -270,18 +220,10 @@ defmodule ChatApi.Chat do
 
   defp start_group_chat(
          user_ids,
-         first_message_content,
-         first_message_sender,
-         public_key,
-         private_key,
          conversation_alias
        ) do
     new_conversation(
       user_ids,
-      first_message_content,
-      first_message_sender,
-      public_key,
-      private_key,
       false,
       conversation_alias
     )

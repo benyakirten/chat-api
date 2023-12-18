@@ -7,6 +7,7 @@
 # General application configuration
 import Config
 
+# Configure Ecto
 config :chat_api,
   ecto_repos: [ChatApi.Repo]
 
@@ -23,6 +24,16 @@ config :chat_api, ChatApiWeb.Endpoint,
   ],
   pubsub_server: ChatApi.PubSub,
   live_view: [signing_salt: "Cf6nD3i0"]
+
+# Configure Ecto Cloak - Used to encrypt public/private keys
+# since persistence is not guaranteed (e.g. web client vs native).
+config :chat_api, ChatApi.Vault,
+  json_library: Jason,
+  ciphers: [
+    default:
+      {Cloak.Ciphers.AES.GCM,
+       tag: "AES.GCM.V1", key: "ljz1TwdelFww0XWzksA5Ts5rki97x0IYdSJPz9cKIW8="}
+  ]
 
 # Configures the mailer
 #

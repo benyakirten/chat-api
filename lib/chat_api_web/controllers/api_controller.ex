@@ -1,5 +1,5 @@
 defmodule ChatApiWeb.ApiController do
-  alias ChatApi.{Parameters, Account}
+  alias ChatApi.Account
   alias ChatApi.{Pagination, Chat}
   use ChatApiWeb, :controller
 
@@ -23,5 +23,12 @@ defmodule ChatApiWeb.ApiController do
       ) do
     {users, page_size} = Account.search_users(user_id, query_params)
     render(conn, :paginate_items, %{items: users, page_size: page_size, key: "users"})
+  end
+
+  def check_private_conversation(
+        %Plug.Conn{assigns: %{user_id: user_id}, query_params: query_params} = conn,
+        _body
+      ) do
+    # TODO: Implement this
   end
 end

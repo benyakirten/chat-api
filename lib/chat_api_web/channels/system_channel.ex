@@ -1,7 +1,7 @@
 defmodule ChatApiWeb.SystemChannel do
   alias ChatApiWeb.UserSocket
   alias ChatApiWeb.Presence
-  alias ChatApi.{Account, Serializer}
+  alias ChatApi.{Account, Serializer, Chat}
   use ChatApiWeb, :channel
 
   defp add_user_id_to_presence(socket),
@@ -77,28 +77,54 @@ defmodule ChatApiWeb.SystemChannel do
     end
   end
 
-  def handle_in("start_conversation", payload, socket) do
+  def handle_in("start_group_conversation", payload, socket) do
     %{
       "user_ids" => user_ids,
-      "private" => private,
-      "message" => first_message_content,
+      "token" => token
+    } = payload
+
+    conversation_alias = Map.get(payload, "alias", nil)
+    user_ids = include_user_id_in_user_ids(user_ids, socket.assigns.user_id)
+
+    if UserSocket.authorized?(socket, token) do
+      result =
+        Chat.start_group_conversation(
+          user_ids,
+          conversation_alias
+        )
+
+      case result do
+        {:error, reason} ->
+          {:reply, {:error, reason}, socket}
+
+        {:ok, conversation} ->
+          broadcast_new_conversation_to_users(conversation, user_ids)
+          {:reply, {:ok, conversation.id}, socket}
+      end
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
+  end
+
+  def handle_in("start_private_conversation", payload, socket) do
+    %{
+      "user_ids" => user_ids,
       "token" => token,
       "public_key" => public_key,
       "private_key" => private_key
     } = payload
 
-    conversation_alias = Map.get(payload, "alias", nil)
+    user_ids = include_user_id_in_user_ids(user_ids, socket.assigns.user_id)
 
     if UserSocket.authorized?(socket, token) do
-      case ChatApi.Chat.start_conversation(
-             user_ids,
-             private,
-             first_message_content,
-             socket.assigns.user_id,
-             public_key,
-             private_key,
-             conversation_alias
-           ) do
+      result =
+        Chat.start_private_conversation(
+          user_ids,
+          public_key,
+          private_key
+        )
+
+      case result do
         {:error, reason} ->
           {:reply, {:error, reason}, socket}
 
@@ -122,6 +148,14 @@ defmodule ChatApiWeb.SystemChannel do
           "user_ids" => user_ids
         }
       )
+    end
+  end
+
+  defp include_user_id_in_user_ids(user_ids, user_id) do
+    if Enum.member?(user_ids, user_id) do
+      user_ids
+    else
+      [user_id | user_ids]
     end
   end
 end
