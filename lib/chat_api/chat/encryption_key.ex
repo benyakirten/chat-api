@@ -12,7 +12,7 @@ defmodule ChatApi.Chat.EncryptionKey do
   An example of data given might be:
   ```
   %{
-  "alg" => "RSA-OAEP-256",
+  "alg" => "RSA-OAEP-257",
   "d" =>
     "AlLh-5E74d0TRf0lBcKU25LSwgG43jmdOEGivbsDHHmastztsV-0TurL0mPYaGI4pDGHLU_D0VywR48dCJdQKALCDLbGIBzKBmrNBwknGRlnZ033Paz-qzzUMxNNPCGpI7nBbfUNwmWSHlgMUijuiEEfPOGXfTXXXIdEzjFCgOV7oin7bdoH4mkph506cdgyOpHFkVHPCHc8zKEJtaVI3HNmIORALgMOVtTIMECAiCa_pk2Cyp4g9t8n7Pt4z7HyOaAt-x9YjzRSIFAfa5jwx-WDjh9U7_Yz4hjkLdzlS-FKahsaoazrM7kOimHlXeVpqJjWfkfdywXB7iW2PLN80Q",
   "dp" =>
@@ -53,19 +53,19 @@ defmodule ChatApi.Chat.EncryptionKey do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "encryption_keys" do
-    field(:alg, ChatApi.Encrypted.Binary)
+    field(:alg, :binary)
     field(:d, ChatApi.Encrypted.Binary)
     field(:dp, ChatApi.Encrypted.Binary)
     field(:dq, ChatApi.Encrypted.Binary)
     field(:e, ChatApi.Encrypted.Binary)
     field(:ext, :boolean)
     field(:key_ops, {:array, :binary})
-    field(:kty, ChatApi.Encrypted.Binary)
+    field(:kty, :binary)
     field(:n, ChatApi.Encrypted.Binary)
     field(:p, ChatApi.Encrypted.Binary)
     field(:q, ChatApi.Encrypted.Binary)
     field(:qi, ChatApi.Encrypted.Binary)
-    field(:type, ChatApi.Encrypted.Binary)
+    field(:type, :binary)
 
     belongs_to(:user, User)
     belongs_to(:conversation, Conversation)

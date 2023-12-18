@@ -1,7 +1,6 @@
 defmodule ChatApi.Chat.Conversation do
   alias ChatApi.Chat.{Message, Conversation}
   alias ChatApi.Account.User
-  alias ChatApi.Repo
 
   use Ecto.Schema
 
@@ -62,38 +61,21 @@ defmodule ChatApi.Chat.Conversation do
     # to strings inside of the clause
     user_ids = convert_uuids_to_binary([user_id1, user_id2])
 
-    if length(user_ids) == 2 do
-      Ecto.Multi.new()
-      |> Ecto.Multi.run(:get_users, fn _repo, _changes ->
-        ids = [user_id1, user_id2]
-        query = from(u in User, where: u.id in ^ids)
-
-        case Repo.all(query) do
-          users when length(users) < 2 -> {:error, :invalid_ids}
-          users -> {:ok, users}
-        end
-      end)
-      |> Ecto.Multi.one(
-        :get_conversation,
-        from(
-          c in Conversation,
-          where: c.private == true,
-          join:
-            uc in subquery(
-              from(uc in "users_conversations",
-                where: uc.user_id in ^user_ids,
-                group_by: uc.conversation_id,
-                select: uc.conversation_id,
-                having: count(uc.user_id) == ^length(user_ids)
-              )
-            ),
-          on: c.id == uc.conversation_id,
-          group_by: c.id
-        )
-      )
-    else
-      {:error, :invalid_user_ids}
-    end
+    from(
+      c in Conversation,
+      where: c.private == true,
+      join:
+        uc in subquery(
+          from(uc in "users_conversations",
+            where: uc.user_id in ^user_ids,
+            group_by: uc.conversation_id,
+            select: uc.conversation_id,
+            having: count(uc.user_id) == ^length(user_ids)
+          )
+        ),
+      on: c.id == uc.conversation_id,
+      group_by: c.id
+    )
   end
 
   def member_of_conversation_query(conversation_id, user_id) do
@@ -145,6 +127,7 @@ defmodule ChatApi.Chat.Conversation do
     )
   end
 
+  @spec read_time_for_users_in_conversation_query(binary()) :: Ecto.Query.t()
   def read_time_for_users_in_conversation_query(conversation_id) do
     [conversation_binary_id] = convert_uuids_to_binary([conversation_id])
 

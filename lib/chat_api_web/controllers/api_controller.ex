@@ -1,5 +1,5 @@
 defmodule ChatApiWeb.ApiController do
-  alias ChatApi.Account
+  alias ChatApi.{Parameters, Account}
   alias ChatApi.{Pagination, Chat}
   use ChatApiWeb, :controller
 
