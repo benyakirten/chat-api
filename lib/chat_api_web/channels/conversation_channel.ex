@@ -1,11 +1,8 @@
 defmodule ChatApiWeb.ConversationChannel do
   use ChatApiWeb, :channel
 
-  alias ChatApi.Pagination
-  alias ChatApiWeb.SystemChannel
-  alias ChatApiWeb.UserSocket
-  alias ChatApi.Chat
-  alias ChatApi.Serializer
+  alias ChatApiWeb.{SystemChannel, UserSocket}
+  alias ChatApi.{Chat, Serializer, Pagination}
 
   @impl true
   def join("conversation:" <> conversation_id, payload, socket) do
@@ -198,6 +195,30 @@ defmodule ChatApiWeb.ConversationChannel do
       case Chat.modify_conversation(socket.assigns.conversation_id, new_members, new_alias) do
         {:ok, conversation, user_ids} ->
           SystemChannel.broadcast_new_conversation_to_users(conversation, user_ids)
+          {:noreply, socket}
+
+        {:error, error} ->
+          {:reply, {:error, error}, socket}
+      end
+    end
+  end
+
+  def handle_in("set_encryption_keys", payload, socket) do
+    %{"token" => token, "public_key" => public_key, "private_key" => private_key} = payload
+
+    if UserSocket.authorized?(socket, token) do
+      case Chat.set_user_encryption_keys(
+             socket.assigns.conversation_id,
+             socket.assigns.user_id,
+             public_key,
+             private_key
+           ) do
+        {:ok, _} ->
+          broadcast!(socket, "set_encryption_keys", %{
+            "user_id" => socket.assigns.user_id,
+            "public_key" => public_key
+          })
+
           {:noreply, socket}
 
         {:error, error} ->

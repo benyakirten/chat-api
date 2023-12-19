@@ -142,7 +142,7 @@ defmodule ChatApiWeb.SystemChannel do
 
   def broadcast_new_conversation_to_users(conversation, user_ids) do
     for user_id <- user_ids do
-      ChatApiWeb.Endpoint.broadcast(
+      ChatApiWeb.Endpoint.broadcast!(
         "user:#{user_id}",
         "new_conversation",
         %{

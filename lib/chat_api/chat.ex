@@ -154,13 +154,13 @@ defmodule ChatApi.Chat do
 
           public_key_changeset =
             %EncryptionKey{}
-            |> EncryptionKey.changeset(user, conversation, Map.put(public_key, "type", "public"))
+            |> EncryptionKey.changeset(conversation, user, Map.put(public_key, "type", "public"))
 
           private_key_changeset =
             %EncryptionKey{}
             |> EncryptionKey.changeset(
-              user,
               conversation,
+              user,
               Map.put(private_key, "type", "private")
             )
 
@@ -399,5 +399,25 @@ defmodule ChatApi.Chat do
   @spec private_conversation(binary(), binary()) :: nil | Conversation.t()
   def private_conversation(user_id1, user_id2) do
     Conversation.find_private_conversation_by_users_query(user_id1, user_id2) |> Repo.one()
+  end
+
+  @spec set_user_encryption_keys(Conversation.t(), User.t(), map(), map()) ::
+          {:error, :failed_to_insert_keys} | {:ok, {EncryptionKey.t(), EncryptionKey.t()}}
+  def set_user_encryption_keys(conversation, user, public_key, private_key) do
+    pub_key =
+      %EncryptionKey{}
+      |> EncryptionKey.changeset(conversation, user, Map.put(public_key, "type", "public"))
+
+    priv_key =
+      %EncryptionKey{}
+      |> EncryptionKey.changeset(conversation, user, Map.put(private_key, "type", "private"))
+
+    with {:ok, inserted_pub_key} <- Repo.insert(pub_key),
+         {:ok, inserted_priv_key} <- Repo.insert(priv_key) do
+      {:ok, {inserted_pub_key, inserted_priv_key}}
+    else
+      error ->
+        {:error, error}
+    end
   end
 end
