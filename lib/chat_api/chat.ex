@@ -261,12 +261,10 @@ defmodule ChatApi.Chat do
           public_key =
             EncryptionKey.get_public_encryption_key_for_conversation(conversation.id, user_id)
             |> Repo.one()
-            |> IO.inspect()
 
           private_key =
             EncryptionKey.get_private_encryption_key_for_conversation(conversation.id, user_id)
             |> Repo.one()
-            |> IO.inspect()
 
           {:ok, %{public_key: public_key, private_key: private_key}}
         else
