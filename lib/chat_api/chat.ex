@@ -256,6 +256,23 @@ defmodule ChatApi.Chat do
 
         {:ok, read_times}
       end)
+      |> Ecto.Multi.run(:get_keys, fn _repo, %{get_conversation: conversation} ->
+        if conversation.private do
+          public_key =
+            EncryptionKey.get_public_encryption_key_for_conversation(conversation.id, user_id)
+            |> Repo.one()
+            |> IO.inspect()
+
+          private_key =
+            EncryptionKey.get_private_encryption_key_for_conversation(conversation.id, user_id)
+            |> Repo.one()
+            |> IO.inspect()
+
+          {:ok, %{public_key: public_key, private_key: private_key}}
+        else
+          {:ok, %{public_key: nil, private_key: nil}}
+        end
+      end)
       |> Repo.transaction()
 
     case transaction do
@@ -263,8 +280,19 @@ defmodule ChatApi.Chat do
         {:error, error}
 
       {:ok, results} ->
-        %{get_conversation: conversation, get_read_times: read_times} = results
-        {:ok, conversation, read_times}
+        %{
+          get_conversation: conversation,
+          get_read_times: read_times,
+          get_keys: %{public_key: public_key, private_key: private_key}
+        } = results
+
+        {:ok,
+         %{
+           conversation: conversation,
+           read_times: read_times,
+           public_key: public_key,
+           private_key: private_key
+         }}
     end
   end
 

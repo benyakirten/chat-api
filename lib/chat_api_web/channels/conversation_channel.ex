@@ -14,13 +14,21 @@ defmodule ChatApiWeb.ConversationChannel do
         {:error, reason} ->
           {:error, reason}
 
-        {:ok, conversation, read_times} ->
+        {:ok,
+         %{
+           conversation: conversation,
+           read_times: read_times,
+           public_key: public_key,
+           private_key: private_key
+         }} ->
           data = %{
             "conversation" => Serializer.serialize(conversation),
             "users" => Serializer.serialize(conversation.users),
             "messages" =>
               Serializer.serialize_all(conversation.messages, Pagination.default_page_size()),
-            "read_times" => read_times
+            "read_times" => read_times,
+            "public_key" => public_key,
+            "private_key" => private_key
           }
 
           {:ok, data, assign(socket, :conversation_id, conversation_id)}
