@@ -108,14 +108,14 @@ defmodule ChatApiWeb.SystemChannel do
 
   def handle_in("start_private_conversation", payload, socket) do
     %{
-      "user_ids" => user_ids,
+      "other_user_id" => other_user_id,
       "token" => token,
       "public_key" => public_key,
       "private_key" => private_key
     } = payload
 
     first_user_id = socket.assigns.user_id
-    user_ids = include_user_id_in_user_ids(user_ids, first_user_id)
+    user_ids = include_user_id_in_user_ids(other_user_id, first_user_id)
 
     if UserSocket.authorized?(socket, token) do
       result =
