@@ -1,6 +1,6 @@
 defmodule ChatApi.Serializer do
   alias ChatApi.Pagination
-  alias ChatApi.Chat.{Conversation, Message}
+  alias ChatApi.Chat.{Conversation, Message, EncryptionKey}
   alias ChatApi.Account.{User, UserProfile}
 
   @doc """
@@ -17,6 +17,14 @@ defmodule ChatApi.Serializer do
 
   def serialize([head | tail]) do
     [serialize(head) | serialize(tail)]
+  end
+
+  def serialize([]) do
+    []
+  end
+
+  def serialize(nil) do
+    nil
   end
 
   def serialize(%User{} = user) do
@@ -58,8 +66,22 @@ defmodule ChatApi.Serializer do
     }
   end
 
-  def serialize([]) do
-    []
+  def serialize(%EncryptionKey{} = key) do
+    %{
+      alg: key.alg,
+      d: key.d,
+      dp: key.dp,
+      dq: key.dq,
+      e: key.e,
+      ext: key.ext,
+      key_ops: key.key_ops,
+      kty: key.kty,
+      n: key.n,
+      p: key.p,
+      q: key.q,
+      qi: key.qi,
+      type: key.type
+    }
   end
 
   def serialize(%User{} = user, %UserProfile{} = profile) do

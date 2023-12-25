@@ -93,6 +93,8 @@ defmodule ChatApiWeb.SystemChannel do
           conversation_alias
         )
 
+      IO.inspect(result)
+
       case result do
         {:error, reason} ->
           {:reply, {:error, reason}, socket}
@@ -115,7 +117,7 @@ defmodule ChatApiWeb.SystemChannel do
     } = payload
 
     first_user_id = socket.assigns.user_id
-    user_ids = include_user_id_in_user_ids(other_user_id, first_user_id)
+    user_ids = include_user_id_in_user_ids([other_user_id], first_user_id)
 
     if UserSocket.authorized?(socket, token) do
       result =

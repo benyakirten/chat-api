@@ -168,7 +168,10 @@ defmodule ChatApi.Chat do
                {:ok, private_key} <- Repo.insert(private_key_changeset) do
             {:ok, {public_key, private_key}}
           else
-            error -> error
+            error ->
+              IO.inspect("HERE")
+              IO.inspect(error)
+              error
           end
         end
       )
@@ -195,7 +198,7 @@ defmodule ChatApi.Chat do
         {:error, error}
 
       {:ok, queries} ->
-        conversation = queries[:get_conversation]
+        conversation = queries[:create_conversation]
         {:ok, conversation}
 
       error ->

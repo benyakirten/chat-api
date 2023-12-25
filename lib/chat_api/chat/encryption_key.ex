@@ -77,7 +77,7 @@ defmodule ChatApi.Chat.EncryptionKey do
   def changeset(encryption_key, conversation, user, attrs \\ %{}) do
     encryption_key
     |> cast(attrs, [:alg, :d, :dp, :dq, :e, :ext, :key_ops, :kty, :n, :p, :q, :qi, :type])
-    |> validate_required([:alg, :d, :dp, :dq, :e, :ext, :key_ops, :kty, :n, :p, :q, :qi, :type])
+    |> validate_required([:alg, :e, :ext, :key_ops, :kty, :n, :type])
     |> put_assoc(:user, user)
     |> put_assoc(:conversation, conversation)
     |> unique_constraint([:user_id, :conversation_id, :type])

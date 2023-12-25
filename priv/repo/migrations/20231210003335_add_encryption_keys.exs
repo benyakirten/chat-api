@@ -30,18 +30,20 @@ defmodule :"Elixir.ChatApi.Repo.Migrations.Add-encryption-keys" do
     """
 
     create table(:encryption_keys) do
+      # Private keys do not a d, dp, dq, p, q or qi field.
+      # TODO: Consider if these should be two different tables.
       add(:alg, :text, null: false)
-      add(:d, :binary, null: false)
-      add(:dp, :binary, null: false)
-      add(:dq, :binary, null: false)
+      add(:d, :binary)
+      add(:dp, :binary)
+      add(:dq, :binary)
       add(:e, :binary, null: false)
       add(:ext, :boolean, null: false)
       add(:key_ops, {:array, :text}, null: false)
       add(:kty, :text, null: false)
       add(:n, :binary, null: false)
-      add(:p, :binary, null: false)
-      add(:q, :binary, null: false)
-      add(:qi, :binary, null: false)
+      add(:p, :binary)
+      add(:q, :binary)
+      add(:qi, :binary)
       add(:type, :text, null: false)
 
       # This table has the foreign keys so we can cascade the delete.

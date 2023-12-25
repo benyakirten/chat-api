@@ -24,8 +24,8 @@ defmodule ChatApiWeb.ConversationChannel do
             "messages" =>
               Serializer.serialize_all(conversation.messages, Pagination.default_page_size()),
             "read_times" => read_times,
-            "public_key" => public_key,
-            "private_key" => private_key
+            "public_key" => Serializer.serialize(public_key),
+            "private_key" => Serializer.serialize(private_key)
           }
 
           {:ok, data, assign(socket, :conversation_id, conversation_id)}
