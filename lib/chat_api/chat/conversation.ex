@@ -30,6 +30,11 @@ defmodule ChatApi.Chat.Conversation do
     |> cast(attrs, [:private, :alias])
   end
 
+  @spec conversation_by_id_query(binary()) :: Ecto.Query.t()
+  def conversation_by_id_query(conversation_id),
+    do: from(c in Conversation, where: c.id == ^conversation_id)
+
+  @spec user_conversations_query(binary()) :: Ecto.Query.t()
   def user_conversations_query(user_id) do
     from(c in Conversation, join: u in assoc(c, :users), where: u.id == ^user_id)
   end
@@ -91,10 +96,6 @@ defmodule ChatApi.Chat.Conversation do
       where: c.private == ^false and c.id == ^conversation_id and u.id == ^user_id,
       preload: :users
     )
-  end
-
-  def conversation_by_id_query(conversation_id) do
-    from(c in Conversation, where: c.id == ^conversation_id)
   end
 
   def private_conversation_query(conversation_id) do
