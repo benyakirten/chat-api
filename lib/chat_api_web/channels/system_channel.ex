@@ -93,8 +93,6 @@ defmodule ChatApiWeb.SystemChannel do
           conversation_alias
         )
 
-      IO.inspect(result)
-
       case result do
         {:error, reason} ->
           {:reply, {:error, reason}, socket}

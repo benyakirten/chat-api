@@ -205,11 +205,6 @@ defmodule ChatApiWeb.ConversationChannel do
 
   def handle_in("set_encryption_keys", payload, socket) do
     %{"token" => token, "public_key" => public_key, "private_key" => private_key} = payload
-    IO.inspect("HELLO")
-    IO.inspect(socket.assigns.conversation_id)
-    IO.inspect(socket.assigns.user_id)
-    IO.inspect(public_key)
-    IO.inspect(private_key)
 
     if UserSocket.authorized?(socket, token) do
       case Chat.set_user_encryption_keys(
