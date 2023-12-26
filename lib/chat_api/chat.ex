@@ -262,11 +262,11 @@ defmodule ChatApi.Chat do
       |> Ecto.Multi.run(:get_keys, fn _repo, %{get_conversation: conversation} ->
         if conversation.private do
           public_key =
-            EncryptionKey.get_public_encryption_key_for_conversation(conversation.id, user_id)
+            EncryptionKey.public_key_query(conversation.id, user_id)
             |> Repo.one()
 
           private_key =
-            EncryptionKey.get_private_encryption_key_for_conversation(conversation.id, user_id)
+            EncryptionKey.private_key_query(conversation.id, user_id)
             |> Repo.one()
 
           {:ok, %{public_key: public_key, private_key: private_key}}

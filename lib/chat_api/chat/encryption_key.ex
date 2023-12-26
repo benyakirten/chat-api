@@ -90,7 +90,7 @@ defmodule ChatApi.Chat.EncryptionKey do
     )
   end
 
-  def get_private_encryption_key_for_conversation(conversation_id, user_id) do
+  def private_key_query(conversation_id, user_id) do
     from(
       k in EncryptionKey,
       where:
@@ -98,7 +98,7 @@ defmodule ChatApi.Chat.EncryptionKey do
     )
   end
 
-  def get_public_encryption_key_for_conversation(conversation_id, user_id) do
+  def public_key_query(conversation_id, user_id) do
     from(
       k in EncryptionKey,
       where:
