@@ -103,6 +103,20 @@ defmodule ChatApi.Chat do
       :conversation_not_found
     )
     |> return_error_on_no_results(:get_user, User.user_by_id_query(user_id), :user_not_found)
+    |> Ecto.Multi.run(:check_for_public_key, fn _repo,
+                                                %{get_conversation: conversation, get_user: user} ->
+      query = EncryptionKey.public_key_query(conversation.id, user.id)
+
+      if conversation.private do
+        if Repo.exists?(query) do
+          {:ok, :public_key_exists}
+        else
+          {:error, :no_public_key}
+        end
+      else
+        {:ok, :not_private_conversation}
+      end
+    end)
     |> Ecto.Multi.run(:add_message, fn _repo, %{get_user: user, get_conversation: conversation} ->
       %Message{}
       |> Message.changeset(%{content: content})
