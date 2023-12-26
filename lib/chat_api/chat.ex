@@ -152,28 +152,32 @@ defmodule ChatApi.Chat do
         fn _repo, %{create_conversation: conversation, get_users: users} ->
           user = Enum.find(users, &(&1.id == first_user_id))
 
-          public_key_changeset =
-            %EncryptionKey{}
-            |> EncryptionKey.changeset(conversation, user, Map.put(public_key, "type", "public"))
-
-          private_key_changeset =
-            %EncryptionKey{}
-            |> EncryptionKey.changeset(
-              conversation,
-              user,
-              Map.put(private_key, "type", "private")
-            )
-
-          with {:ok, public_key} <- Repo.insert(public_key_changeset),
-               {:ok, private_key} <- Repo.insert(private_key_changeset) do
-            {:ok, {public_key, private_key}}
-          else
-            error -> error
-          end
+          add_multi_keys(conversation, user, public_key, private_key)
         end
       )
       |> Repo.transaction()
       |> get_conversation_users_from_multi_results()
+    end
+  end
+
+  defp add_multi_keys(conversation, user, public_key, private_key) do
+    public_key_changeset =
+      %EncryptionKey{}
+      |> EncryptionKey.changeset(conversation, user, Map.put(public_key, "type", "public"))
+
+    private_key_changeset =
+      %EncryptionKey{}
+      |> EncryptionKey.changeset(
+        conversation,
+        user,
+        Map.put(private_key, "type", "private")
+      )
+
+    with {:ok, public_key} <- Repo.insert(public_key_changeset),
+         {:ok, private_key} <- Repo.insert(private_key_changeset) do
+      {:ok, {public_key, private_key}}
+    else
+      error -> error
     end
   end
 
@@ -418,23 +422,9 @@ defmodule ChatApi.Chat do
       end
     end)
     |> Ecto.Multi.run(
-      :insert_keys,
+      :add_keys,
       fn _repo, %{get_conversation: conversation, get_user: user} ->
-        pub_key =
-          %EncryptionKey{}
-          |> EncryptionKey.changeset(conversation, user, Map.put(public_key, "type", "public"))
-
-        priv_key =
-          %EncryptionKey{}
-          |> EncryptionKey.changeset(conversation, user, Map.put(private_key, "type", "private"))
-
-        with {:ok, inserted_pub_key} <- Repo.insert(pub_key),
-             {:ok, inserted_priv_key} <- Repo.insert(priv_key) do
-          {:ok, {inserted_pub_key, inserted_priv_key}}
-        else
-          error ->
-            {:error, error}
-        end
+        add_multi_keys(conversation, user, public_key, private_key)
       end
     )
     |> Repo.transaction()
