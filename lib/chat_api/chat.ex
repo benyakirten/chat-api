@@ -82,17 +82,18 @@ defmodule ChatApi.Chat do
         end
       end)
       |> Ecto.Multi.run(:update_messages, fn _repo, %{get_messages: messages} ->
-        changesets =
+        messages =
           Enum.map(encrypted_messages, fn {user_id, encrypted_message} ->
             message = Enum.find(messages, &(&1.recipient_user_id == user_id))
 
-            Message.changeset(message, %{content: encrypted_message})
+            {:ok, message} =
+              Message.changeset(message, %{content: encrypted_message})
+              |> Repo.update()
+
+            message
           end)
 
-        case Repo.update_all(Message, changesets) do
-          {0, _} -> {:error, :messages_not_updated}
-          {_, messages} -> {:ok, messages}
-        end
+        {:ok, messages}
       end)
       |> Repo.transaction()
 
@@ -147,16 +148,16 @@ defmodule ChatApi.Chat do
     end)
     |> Ecto.Multi.run(:get_recipients, fn _repo, _changes ->
       user_count = Conversation.num_users_in_conversation_query(conversation_id) |> Repo.one()
-      # Also verify they have public keys?
+
       users =
         Enum.map(encrypted_messages, fn {k, _} -> k end)
         |> User.users_by_ids_query()
         |> Repo.all()
 
-      if length(users) == user_count do
-        {:ok, users}
-      else
-        {:error, :incorrect_num_users}
+      case length(users) do
+        num_users when num_users == user_count -> {:ok, users}
+        num_users when num_users < user_count -> {:error, :not_enough_recipients}
+        _ -> {:error, :too_many_recipients}
       end
     end)
     |> Ecto.Multi.run(:add_messages, fn
@@ -170,17 +171,18 @@ defmodule ChatApi.Chat do
           Enum.map(encrypted_messages, fn {user_id, content} ->
             recipient = Enum.find(recipients, &(&1.id == user_id))
 
-            Message.changeset(%Message{}, %{content: content})
-            |> Ecto.Changeset.put_assoc(:user, recipient)
-            |> Ecto.Changeset.put_assoc(:message_group, message_group)
-            |> Ecto.Changeset.put_assoc(:conversation, conversation)
-            |> Ecto.Changeset.put_change(:recipient_user_id, user_id)
+            {:ok, message} =
+              Message.changeset(%Message{}, %{content: content})
+              |> Ecto.Changeset.put_assoc(:user, recipient)
+              |> Ecto.Changeset.put_assoc(:message_group, message_group)
+              |> Ecto.Changeset.put_assoc(:conversation, conversation)
+              |> Ecto.Changeset.put_change(:recipient_user_id, user_id)
+              |> Repo.insert()
+
+            message
           end)
 
-        case Repo.insert_all(Message, messages) do
-          {0, _} -> {:error, :messages_not_inserted}
-          {_, messages} -> {:ok, messages}
-        end
+        {:ok, messages}
     end)
   end
 
