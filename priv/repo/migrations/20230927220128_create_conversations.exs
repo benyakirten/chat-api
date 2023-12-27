@@ -9,6 +9,12 @@ defmodule ChatApi.Repo.Migrations.CreateConversations do
       timestamps()
     end
 
+    create(
+      constraint(:conversations, :no_alias_on_private_conversation,
+        check: "private is false or alias is null"
+      )
+    )
+
     create table(:users_conversations, primary_key: false) do
       add(:user_id, references(:users, type: :binary_id, on_delete: :delete_all), null: false)
 

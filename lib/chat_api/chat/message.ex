@@ -32,7 +32,6 @@ defmodule ChatApi.Chat.Message do
     from(m in Message, where: m.id == ^message_id and m.user_id == ^user_id)
   end
 
-  # TODO: Update these map types
   @spec paginate_messages_query(binary(), map() | nil) :: {Ecto.Query.t(), integer()}
   def paginate_messages_query(conversation_id, opts \\ %{}) do
     page_size = Pagination.get_page_size(opts)
