@@ -146,17 +146,19 @@ defmodule ChatApiWeb.ConversationChannel do
   end
 
   def handle_in("edit_message", payload, socket) do
-    %{"token" => token, "message_id" => message_id, "content" => content} = payload
+    %{
+      "token" => token,
+      "message_group_id" => message_group_id,
+      "encrypted_messages" => encrypted_messages
+    } = payload
 
     if UserSocket.authorized?(socket, token) do
-      case Chat.update_message(message_id, socket.assigns.user_id, content) do
+      case Chat.update_message(message_group_id, socket.assigns.user_id, encrypted_messages) do
         {:error, error} ->
           {:reply, {:error, error}, socket}
 
-        {:ok, message} ->
-          broadcast!(socket, "update_message", %{
-            "message" => Serializer.serialize(message)
-          })
+        {:ok, messages} ->
+          broadcast_messages_to_users(messages, socket.assigns.user_id, "edit_message")
 
           {:noreply, socket}
       end
@@ -166,16 +168,16 @@ defmodule ChatApiWeb.ConversationChannel do
   end
 
   def handle_in("delete_message", payload, socket) do
-    %{"token" => token, "message_id" => message_id} = payload
+    %{"token" => token, "message_group_id" => message_group_id} = payload
 
     if UserSocket.authorized?(socket, token) do
-      case Chat.delete_message(message_id, socket.assigns.user_id) do
+      case Chat.delete_message(message_group_id, socket.assigns.user_id) do
         :error ->
           {:reply, {:error, :delete_failed}, socket}
 
         :ok ->
           broadcast!(socket, "delete_message", %{
-            "message_id" => message_id
+            "message_group_id" => message_group_id
           })
 
           {:noreply, socket}

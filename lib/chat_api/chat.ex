@@ -68,6 +68,7 @@ defmodule ChatApi.Chat do
     )
   end
 
+  @spec update_message(binary(), binary(), map()) :: {:error, any()} | {:ok, [Message.t()]}
   def update_message(message_group_id, sender_id, encrypted_messages) do
     transaction =
       Ecto.Multi.new()
@@ -101,8 +102,11 @@ defmodule ChatApi.Chat do
       {:error, _change_atom, error, _changes} ->
         {:error, error}
 
+      {:error, error} ->
+        {:error, error}
+
       {:ok, changes} ->
-        {:ok, changes[:update_message]}
+        {:ok, changes[:update_messages]}
     end
   end
 
@@ -336,19 +340,15 @@ defmodule ChatApi.Chat do
         {:ok, read_times}
       end)
       |> Ecto.Multi.run(:get_keys, fn _repo, %{get_conversation: conversation} ->
-        if conversation.private do
-          public_key =
-            EncryptionKey.public_key_query(conversation.id, user_id)
-            |> Repo.one()
+        public_key =
+          EncryptionKey.public_key_query(conversation.id, user_id)
+          |> Repo.one()
 
-          private_key =
-            EncryptionKey.private_key_query(conversation.id, user_id)
-            |> Repo.one()
+        private_key =
+          EncryptionKey.private_key_query(conversation.id, user_id)
+          |> Repo.one()
 
-          {:ok, %{public_key: public_key, private_key: private_key}}
-        else
-          {:ok, %{public_key: nil, private_key: nil}}
-        end
+        {:ok, %{public_key: public_key, private_key: private_key}}
       end)
       |> Repo.transaction()
 
