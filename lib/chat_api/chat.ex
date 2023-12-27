@@ -43,7 +43,7 @@ defmodule ChatApi.Chat do
     |> Ecto.Multi.run(
       :create_conversation,
       fn _repo, %{get_users: users} ->
-        Conversation.changeset(%Conversation{private: private, alias: conversation_alias})
+        Conversation.changeset(%Conversation{}, %{private: private, alias: conversation_alias})
         |> Ecto.Changeset.put_assoc(:users, users)
         |> Repo.insert()
       end
@@ -442,101 +442,5 @@ defmodule ChatApi.Chat do
       end
     )
     |> Repo.transaction()
-  end
-
-  alias ChatApi.Chat.MessageGroup
-
-  @doc """
-  Returns the list of message_groups.
-
-  ## Examples
-
-      iex> list_message_groups()
-      [%MessageGroup{}, ...]
-
-  """
-  def list_message_groups do
-    Repo.all(MessageGroup)
-  end
-
-  @doc """
-  Gets a single message_group.
-
-  Raises `Ecto.NoResultsError` if the Message group does not exist.
-
-  ## Examples
-
-      iex> get_message_group!(123)
-      %MessageGroup{}
-
-      iex> get_message_group!(456)
-      ** (Ecto.NoResultsError)
-
-  """
-  def get_message_group!(id), do: Repo.get!(MessageGroup, id)
-
-  @doc """
-  Creates a message_group.
-
-  ## Examples
-
-      iex> create_message_group(%{field: value})
-      {:ok, %MessageGroup{}}
-
-      iex> create_message_group(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def create_message_group(attrs \\ %{}) do
-    %MessageGroup{}
-    |> MessageGroup.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  @doc """
-  Updates a message_group.
-
-  ## Examples
-
-      iex> update_message_group(message_group, %{field: new_value})
-      {:ok, %MessageGroup{}}
-
-      iex> update_message_group(message_group, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_message_group(%MessageGroup{} = message_group, attrs) do
-    message_group
-    |> MessageGroup.changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
-  Deletes a message_group.
-
-  ## Examples
-
-      iex> delete_message_group(message_group)
-      {:ok, %MessageGroup{}}
-
-      iex> delete_message_group(message_group)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_message_group(%MessageGroup{} = message_group) do
-    Repo.delete(message_group)
-  end
-
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking message_group changes.
-
-  ## Examples
-
-      iex> change_message_group(message_group)
-      %Ecto.Changeset{data: %MessageGroup{}}
-
-  """
-  def change_message_group(%MessageGroup{} = message_group, attrs \\ %{}) do
-    MessageGroup.changeset(message_group, attrs)
   end
 end

@@ -1,6 +1,6 @@
 defmodule ChatApi.Chat.Message do
   alias ChatApi.Pagination
-  alias ChatApi.Chat.{Conversation, Message}
+  alias ChatApi.Chat.Message
   alias ChatApi.Account.User
   use Ecto.Schema
   import Ecto.Changeset
@@ -16,7 +16,6 @@ defmodule ChatApi.Chat.Message do
     field(:content, :string)
 
     belongs_to(:user, User)
-    belongs_to(:conversation, Conversation)
 
     timestamps()
   end

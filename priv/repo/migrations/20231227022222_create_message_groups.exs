@@ -6,8 +6,6 @@ defmodule ChatApi.Repo.Migrations.CreateMessageGroups do
       add(:user_id, references(:users, on_delete: :delete_all))
       add(:conversation_id, references(:conversations, on_delete: :delete_all))
       add(:message_id, references(:messages, on_delete: :delete_all))
-
-      timestamps()
     end
 
     create(index(:message_groups, [:user_id]))
