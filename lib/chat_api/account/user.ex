@@ -3,7 +3,6 @@ defmodule ChatApi.Account.User do
   import Ecto.Changeset
   import Ecto.Query
 
-  alias ChatApi.Chat.Message
   alias ChatApi.Account.{UserProfile, UserToken, User}
   alias ChatApi.Pagination
 
@@ -25,7 +24,6 @@ defmodule ChatApi.Account.User do
 
     has_many(:tokens, UserToken)
     has_one(:profile, UserProfile)
-    has_many(:messages, Message)
 
     many_to_many(:conversations, ChatApi.Chat.Conversation,
       join_through: "users_conversations",
@@ -62,6 +60,7 @@ defmodule ChatApi.Account.User do
   end
 
   def user_by_id_query(id), do: from(u in User, where: u.id == ^id)
+  def users_by_ids_query(user_ids), do: from(u in User, where: u.id in ^user_ids)
 
   @email_regex ~r<(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])>
   defp validate_email(changeset) do

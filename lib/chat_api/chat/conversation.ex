@@ -136,4 +136,13 @@ defmodule ChatApi.Chat.Conversation do
       select: {uc.user_id, uc.last_read}
     )
   end
+
+  def num_users_in_conversation_query(conversation_id) do
+    [id] = convert_uuids_to_binary([conversation_id])
+
+    from(uc in "users_conversations",
+      where: uc.conversation_id == ^id,
+      select: count(uc.user_id)
+    )
+  end
 end

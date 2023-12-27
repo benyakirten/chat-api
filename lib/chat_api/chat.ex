@@ -6,7 +6,7 @@ defmodule ChatApi.Chat do
   import Ecto.Query
 
   alias ChatApi.{Pagination, Serializer, Repo}
-  alias ChatApi.Chat.{Conversation, Message, EncryptionKey}
+  alias ChatApi.Chat.{Conversation, Message, EncryptionKey, MessageGroup}
   alias ChatApi.Account.User
 
   @doc """
@@ -112,7 +112,7 @@ defmodule ChatApi.Chat do
     end
   end
 
-  defp send_conversation_message(conversation_id, user_id, content) do
+  defp send_conversation_message(conversation_id, user_id, encrypted_messages) do
     # Verify that the conversation exists and has the user
     Ecto.Multi.new()
     |> return_error_on_no_results(
@@ -121,26 +121,48 @@ defmodule ChatApi.Chat do
       :conversation_not_found
     )
     |> return_error_on_no_results(:get_user, User.user_by_id_query(user_id), :user_not_found)
-    |> Ecto.Multi.run(:check_for_public_key, fn _repo,
-                                                %{get_conversation: conversation, get_user: user} ->
-      if conversation.private do
-        query = EncryptionKey.public_key_query(conversation.id, user.id)
+    # Make sure we have encrypted messages for every user in the conversation
+    |> Ecto.Multi.run(:create_message_group, fn _repo,
+                                                %{get_user: user, get_conversation: conversation} ->
+      MessageGroup.new(conversation, user)
+      |> Repo.insert()
+    end)
+    |> Ecto.Multi.run(:get_recipients, fn _repo, _changes ->
+      user_count = Conversation.num_users_in_conversation_query(conversation_id) |> Repo.one()
+      # Also verify they have public keys?
+      users =
+        Enum.map(encrypted_messages, fn {k, _} -> k end)
+        |> User.users_by_ids_query()
+        |> Repo.all()
 
-        if Repo.exists?(query) do
-          {:ok, :public_key_exists}
-        else
-          {:error, :no_public_key}
-        end
+      if length(users) == user_count do
+        {:ok, users}
       else
-        {:ok, :not_private_conversation}
+        {:error, :incorrect_num_users}
       end
     end)
-    |> Ecto.Multi.run(:add_message, fn _repo, %{get_user: user, get_conversation: conversation} ->
-      %Message{}
-      |> Message.changeset(%{content: content})
-      |> Ecto.Changeset.put_assoc(:user, user)
-      |> Ecto.Changeset.put_assoc(:conversation, conversation)
-      |> Repo.insert()
+    |> Ecto.Multi.run(:add_message, fn
+      _repo,
+      %{
+        get_conversation: conversation,
+        create_message_group: message_group,
+        get_recipients: recipients
+      } ->
+        messages =
+          Enum.map(encrypted_messages, fn {user_id, content} ->
+            recipient = Enum.find(recipients, &(&1.id == user_id))
+
+            Message.changeset(%Message{}, %{content: content})
+            |> Ecto.Changeset.put_assoc(:user, recipient)
+            |> Ecto.Changeset.put_assoc(:message_group, message_group)
+            |> Ecto.Changeset.put_assoc(:conversation, conversation)
+            |> Ecto.Changeset.put_change(:recipient_user_id, user_id)
+          end)
+
+        case Repo.insert_all(Message, messages) do
+          {0, _} -> {:error, :messages_not_inserted}
+          {_, messages} -> {:ok, messages}
+        end
     end)
   end
 
@@ -221,14 +243,6 @@ defmodule ChatApi.Chat do
       public_key,
       private_key,
       %{private: false, alias: conversation_alias}
-    )
-    |> Ecto.Multi.run(
-      :add_keys,
-      fn _repo, %{create_conversation: conversation, get_users: users} ->
-        user = Enum.find(users, &(&1.id == first_user_id))
-
-        add_encryption_keys(conversation, user, public_key, private_key)
-      end
     )
     |> Repo.transaction()
     |> get_conversation_users_from_multi_results()

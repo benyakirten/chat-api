@@ -28,11 +28,18 @@ defmodule ChatApi.Chat.Message do
     |> validate_required([:content])
   end
 
+  @spec message_by_sender_query(binary(), binary()) :: Ecto.Query.t()
   def message_by_sender_query(message_id, user_id) do
     from(m in Message, where: m.id == ^message_id and m.user_id == ^user_id)
   end
 
+  @spec message_by_id_query(binary()) :: Ecto.Query.t()
   def message_by_id_query(message_id) do
     from(m in Message, where: m.id == ^message_id)
+  end
+
+  @spec messages_by_group_id_query(binary()) :: Ecto.Query.t()
+  def messages_by_group_id_query(message_group_id) do
+    from(m in Message, where: m.message_group_id == ^message_group_id)
   end
 end
