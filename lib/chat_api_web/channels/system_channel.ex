@@ -80,7 +80,9 @@ defmodule ChatApiWeb.SystemChannel do
   def handle_in("start_group_conversation", payload, socket) do
     %{
       "user_ids" => user_ids,
-      "token" => token
+      "token" => token,
+      "public_key" => public_key,
+      "private_key" => private_key
     } = payload
 
     conversation_alias = Map.get(payload, "alias", nil)
@@ -89,7 +91,10 @@ defmodule ChatApiWeb.SystemChannel do
     if UserSocket.authorized?(socket, token) do
       result =
         Chat.start_group_conversation(
+          socket.assigns.user_id,
           user_ids,
+          public_key,
+          private_key,
           conversation_alias
         )
 

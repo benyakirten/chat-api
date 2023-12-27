@@ -28,10 +28,20 @@ defmodule ChatApi.Chat do
   > `:private` - boolean, required
   > `:alias` - string, optional, defaults to `nil` (only for group conversations)
   """
-  @spec new_conversation([binary()], map()) :: Ecto.Multi.t()
+  @spec new_conversation(
+          Ecto.Multi.t() | nil,
+          binary(),
+          [binary()],
+          EncryptionKey.t(),
+          EncryptionKey.t(),
+          map()
+        ) :: Ecto.Multi.t()
   def new_conversation(
         multi \\ Ecto.Multi.new(),
+        first_user_id,
         user_ids,
+        public_key,
+        private_key,
         opts
       ) do
     private = opts[:private]
@@ -46,6 +56,14 @@ defmodule ChatApi.Chat do
         Conversation.changeset(%Conversation{}, %{private: private, alias: conversation_alias})
         |> Ecto.Changeset.put_assoc(:users, users)
         |> Repo.insert()
+      end
+    )
+    |> Ecto.Multi.run(
+      :add_keys,
+      fn _repo, %{create_conversation: conversation, get_users: users} ->
+        user = Enum.find(users, &(&1.id == first_user_id))
+
+        add_encryption_keys(conversation, user, public_key, private_key)
       end
     )
   end
@@ -158,23 +176,18 @@ defmodule ChatApi.Chat do
         end
       end)
       |> new_conversation(
+        first_user_id,
         user_ids,
+        public_key,
+        private_key,
         %{private: true}
-      )
-      |> Ecto.Multi.run(
-        :add_keys,
-        fn _repo, %{create_conversation: conversation, get_users: users} ->
-          user = Enum.find(users, &(&1.id == first_user_id))
-
-          add_multi_keys(conversation, user, public_key, private_key)
-        end
       )
       |> Repo.transaction()
       |> get_conversation_users_from_multi_results()
     end
   end
 
-  defp add_multi_keys(conversation, user, public_key, private_key) do
+  defp add_encryption_keys(conversation, user, public_key, private_key) do
     public_key_changeset =
       %EncryptionKey{}
       |> EncryptionKey.changeset(conversation, user, Map.put(public_key, "type", "public"))
@@ -196,12 +209,26 @@ defmodule ChatApi.Chat do
   end
 
   def start_group_conversation(
+        first_user_id,
         user_ids,
+        public_key,
+        private_key,
         conversation_alias \\ nil
       ) do
     new_conversation(
+      first_user_id,
       user_ids,
+      public_key,
+      private_key,
       %{private: false, alias: conversation_alias}
+    )
+    |> Ecto.Multi.run(
+      :add_keys,
+      fn _repo, %{create_conversation: conversation, get_users: users} ->
+        user = Enum.find(users, &(&1.id == first_user_id))
+
+        add_encryption_keys(conversation, user, public_key, private_key)
+      end
     )
     |> Repo.transaction()
     |> get_conversation_users_from_multi_results()
@@ -438,7 +465,7 @@ defmodule ChatApi.Chat do
     |> Ecto.Multi.run(
       :add_keys,
       fn _repo, %{get_conversation: conversation, get_user: user} ->
-        add_multi_keys(conversation, user, public_key, private_key)
+        add_encryption_keys(conversation, user, public_key, private_key)
       end
     )
     |> Repo.transaction()
