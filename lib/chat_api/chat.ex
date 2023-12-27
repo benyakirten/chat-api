@@ -68,26 +68,42 @@ defmodule ChatApi.Chat do
     )
   end
 
-  # TODO: Update this to use the new message_group_id
-  # def update_message(message_group_id, user_id, encrypted_messages) do
-  #   transaction =
-  #     Ecto.Multi.new()
-  #     |> Ecto.Multi.one(:get_message, Message.message_by_sender_query(message_id, user_id))
-  #     |> Ecto.Multi.run(:update_message, fn _repo, %{get_message: message} ->
-  #       message
-  #       |> Message.changeset(%{content: content})
-  #       |> Repo.update()
-  #     end)
-  #     |> Repo.transaction()
+  def update_message(message_group_id, sender_id, encrypted_messages) do
+    transaction =
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:get_messages, fn _repo, _changes ->
+        messages =
+          Repo.all(MessageGroup.messages_in_message_group_query(message_group_id, sender_id))
 
-  #   case transaction do
-  #     {:error, _change_atom, error, _changes} ->
-  #       {:error, error}
+        if length(messages) == length(encrypted_messages) do
+          {:ok, messages}
+        else
+          {:error, :not_enough_updated_messages}
+        end
+      end)
+      |> Ecto.Multi.run(:update_messages, fn _repo, %{get_messages: messages} ->
+        changesets =
+          Enum.map(encrypted_messages, fn {user_id, encrypted_message} ->
+            message = Enum.find(messages, &(&1.recipient_user_id == user_id))
 
-  #     {:ok, changes} ->
-  #       {:ok, changes[:update_message]}
-  #   end
-  # end
+            Message.changeset(message, %{content: encrypted_message})
+          end)
+
+        case Repo.update_all(Message, changesets) do
+          {0, _} -> {:error, :messages_not_updated}
+          {_, messages} -> {:ok, messages}
+        end
+      end)
+      |> Repo.transaction()
+
+    case transaction do
+      {:error, _change_atom, error, _changes} ->
+        {:error, error}
+
+      {:ok, changes} ->
+        {:ok, changes[:update_message]}
+    end
+  end
 
   @spec delete_message(binary(), binary()) :: :error | :ok
   def delete_message(message_group_id, user_id) do
@@ -110,13 +126,12 @@ defmodule ChatApi.Chat do
         {:error, error}
 
       {:ok, changes} ->
-        message = changes[:add_message]
-        {:ok, message}
+        messages = changes[:add_messages]
+        {:ok, messages}
     end
   end
 
   defp send_conversation_message(conversation_id, user_id, encrypted_messages) do
-    # Verify that the conversation exists and has the user
     Ecto.Multi.new()
     |> return_error_on_no_results(
       :get_conversation,
@@ -125,10 +140,10 @@ defmodule ChatApi.Chat do
     )
     |> return_error_on_no_results(:get_user, User.user_by_id_query(user_id), :user_not_found)
     # Make sure we have encrypted messages for every user in the conversation
-    |> Ecto.Multi.run(:create_message_group, fn _repo,
-                                                %{get_user: user, get_conversation: conversation} ->
-      MessageGroup.new(conversation, user)
-      |> Repo.insert()
+    |> Ecto.Multi.run(:create_message_group, fn
+      _repo, %{get_user: user, get_conversation: conversation} ->
+        MessageGroup.new(conversation, user)
+        |> Repo.insert()
     end)
     |> Ecto.Multi.run(:get_recipients, fn _repo, _changes ->
       user_count = Conversation.num_users_in_conversation_query(conversation_id) |> Repo.one()

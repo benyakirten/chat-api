@@ -85,22 +85,21 @@ defmodule ChatApiWeb.ConversationChannel do
 
   @impl true
   def handle_in("send_message", payload, socket) do
-    %{"token" => token, "content" => content} = payload
+    %{"token" => token, "encrypted_messages" => encrypted_messages} = payload
 
     if UserSocket.authorized?(socket, token) do
-      case Chat.send_message(socket.assigns.conversation_id, socket.assigns.user_id, content) do
+      case Chat.send_message(
+             socket.assigns.conversation_id,
+             socket.assigns.user_id,
+             encrypted_messages
+           ) do
         {:error, error} ->
           {:reply, {:error, error}, socket}
 
-        {:ok, message} ->
-          msg = %{"message" => Serializer.serialize(message)}
-          broadcast!(socket, "new_message", msg)
+        {:ok, messages} ->
+          broadcast_messages_to_users(messages, socket.assigns.user_id, "new_message")
 
-          broadcast!(socket, "finish_typing", %{
-            "user_id" => socket.assigns.user_id
-          })
-
-          {:reply, {:ok, msg}, socket}
+          {:reply, {:ok, length(messages)}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -225,5 +224,22 @@ defmodule ChatApiWeb.ConversationChannel do
           {:reply, {:error, error}, socket}
       end
     end
+  end
+
+  @spec broadcast_messages_to_users([Message.t()], String.t(), String.t()) :: :ok
+  def broadcast_messages_to_users(messages, sender, event) do
+    Enum.map(messages, fn message ->
+      broadcast_message_to_user(message, message.recipient_id, sender, event)
+    end)
+
+    :ok
+  end
+
+  defp broadcast_message_to_user(message, user_id, sender, event) do
+    ChatApiWeb.Endpoint.broadcast!(
+      "user:#{user_id}",
+      event,
+      %{"message" => Serializer.serialize(message, sender)}
+    )
   end
 end

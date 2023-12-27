@@ -51,9 +51,10 @@ defmodule ChatApi.Chat.MessageGroup do
     )
   end
 
-  def messages_in_message_group_query(message_group_id) do
+  @spec messages_in_message_group_query(binary(), binary()) :: Ecto.Query.t()
+  def messages_in_message_group_query(message_group_id, sender_id) do
     from(mg in MessageGroup,
-      where: mg.id == ^message_group_id,
+      where: mg.id == ^message_group_id and mg.sender_user_id == ^sender_id,
       join: m in assoc(mg, :messages),
       select: m
     )

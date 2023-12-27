@@ -36,20 +36,18 @@ defmodule ChatApiWeb.ProfileController do
           "password" => password
         }
       ) do
-    with {:ok, user} <- Account.confirm_token(token, :email_change) do
-      if user.id == user_id do
-        case Account.update_user_email(
-               user,
-               password,
-               %{email: email}
-             ) do
-          {:ok, _} -> AuthController.send_204(conn)
-          {:error, _, %Ecto.Changeset{} = changeset, _} -> {:error, changeset}
-          error -> error
-        end
-      else
-        {:error, :invalid_token}
+    with {:ok, user} <- Account.confirm_token(token, :email_change), true <- user.id == user_id do
+      case Account.update_user_email(
+             user,
+             password,
+             %{email: email}
+           ) do
+        {:ok, _} -> AuthController.send_204(conn)
+        {:error, _, %Ecto.Changeset{} = changeset, _} -> {:error, changeset}
+        error -> error
       end
+    else
+      _ -> {:error, :invalid_token}
     end
   end
 
