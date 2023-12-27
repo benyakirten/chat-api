@@ -55,6 +55,7 @@ defmodule ChatApi.Account.User do
     |> validate_password()
   end
 
+  @spec user_by_email_query(binary()) :: Ecto.Query.t()
   def user_by_email_query(email) do
     from(u in User, where: u.email == ^email, preload: [:profile])
   end

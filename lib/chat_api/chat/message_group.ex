@@ -10,6 +10,7 @@ defmodule ChatApi.Chat.MessageGroup do
   schema "message_groups" do
     belongs_to(:user, User, foreign_key: :sender_user_id)
     belongs_to(:conversation, Conversation)
+    has_many(:messages, Message)
   end
 
   @doc false
@@ -41,5 +42,20 @@ defmodule ChatApi.Chat.MessageGroup do
       |> Pagination.paginate_from(opts)
 
     {query, page_size}
+  end
+
+  @spec message_group_by_id_and_user_query(binary(), binary()) :: Ecto.Query.t()
+  def message_group_by_id_and_user_query(message_group_id, user_id) do
+    from(mg in MessageGroup,
+      where: mg.id == ^message_group_id and mg.sender_user_id == ^user_id
+    )
+  end
+
+  def messages_in_message_group_query(message_group_id) do
+    from(mg in MessageGroup,
+      where: mg.id == ^message_group_id,
+      join: m in assoc(mg, :messages),
+      select: m
+    )
   end
 end

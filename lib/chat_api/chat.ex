@@ -68,38 +68,41 @@ defmodule ChatApi.Chat do
     )
   end
 
-  def update_message(message_id, user_id, content) do
-    transaction =
-      Ecto.Multi.new()
-      |> Ecto.Multi.one(:get_message, Message.message_by_sender_query(message_id, user_id))
-      |> Ecto.Multi.run(:update_message, fn _repo, %{get_message: message} ->
-        message
-        |> Message.changeset(%{content: content})
-        |> Repo.update()
-      end)
-      |> Repo.transaction()
+  # TODO: Update this to use the new message_group_id
+  # def update_message(message_group_id, user_id, encrypted_messages) do
+  #   transaction =
+  #     Ecto.Multi.new()
+  #     |> Ecto.Multi.one(:get_message, Message.message_by_sender_query(message_id, user_id))
+  #     |> Ecto.Multi.run(:update_message, fn _repo, %{get_message: message} ->
+  #       message
+  #       |> Message.changeset(%{content: content})
+  #       |> Repo.update()
+  #     end)
+  #     |> Repo.transaction()
 
-    case transaction do
-      {:error, _change_atom, error, _changes} ->
-        {:error, error}
+  #   case transaction do
+  #     {:error, _change_atom, error, _changes} ->
+  #       {:error, error}
 
-      {:ok, changes} ->
-        {:ok, changes[:update_message]}
-    end
-  end
+  #     {:ok, changes} ->
+  #       {:ok, changes[:update_message]}
+  #   end
+  # end
 
-  def delete_message(message_id, user_id) do
-    result = Repo.delete_all(Message.message_by_sender_query(message_id, user_id))
+  @spec delete_message(binary(), binary()) :: :error | :ok
+  def delete_message(message_group_id, user_id) do
+    query = MessageGroup.message_group_by_id_and_user_query(message_group_id, user_id)
 
-    case result do
+    # Delete will be cascaded to the messages.
+    case Repo.delete_all(query) do
       {0, _} -> :error
       _ -> :ok
     end
   end
 
-  def send_message(conversation_id, user_id, content) do
+  def send_message(conversation_id, user_id, encrypted_messages) do
     transaction =
-      send_conversation_message(conversation_id, user_id, content)
+      send_conversation_message(conversation_id, user_id, encrypted_messages)
       |> Repo.transaction()
 
     case transaction do
@@ -141,7 +144,7 @@ defmodule ChatApi.Chat do
         {:error, :incorrect_num_users}
       end
     end)
-    |> Ecto.Multi.run(:add_message, fn
+    |> Ecto.Multi.run(:add_messages, fn
       _repo,
       %{
         get_conversation: conversation,
