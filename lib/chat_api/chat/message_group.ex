@@ -8,9 +8,8 @@ defmodule ChatApi.Chat.MessageGroup do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "message_groups" do
-    belongs_to(:user, User)
+    belongs_to(:user, User, foreign_key: :sender_user_id)
     belongs_to(:conversation, Conversation)
-    belongs_to(:message, Message)
   end
 
   @doc false
@@ -30,13 +29,14 @@ defmodule ChatApi.Chat.MessageGroup do
     # the pagination logic in Pagination.add_seek_pagination/2 and Pagination.paginate_from/2
     message_group_cte =
       from(mg in MessageGroup,
-        where: mg.conversation_id == ^conversation_id and mg.user_id == ^user_id
+        where: mg.conversation_id == ^conversation_id
       )
 
     query =
       Message
       |> with_cte("message_group", as: ^message_group_cte)
-      |> join(:inner, [m], mg in "message_group", on: m.group_id == mg.id)
+      |> join(:inner, [m], mg in "message_group", on: m.message_group_id == mg.id)
+      |> where([m], m.recipient_user_id == ^user_id)
       |> Pagination.add_seek_pagination(page_size)
       |> Pagination.paginate_from(opts)
 

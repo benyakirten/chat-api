@@ -25,7 +25,7 @@ defmodule ChatApi.Pagination do
   def paginate_from(query, opts) do
     with next_token when not is_nil(next_token) <- Map.get(opts, "page_token"),
          {:ok, time, id} <- decode_token(next_token) do
-      query |> where([u], {u.inserted_at, u.id} < {^time, ^id})
+      query |> where([item], {item.inserted_at, item.id} < {^time, ^id})
     else
       _ -> query
     end

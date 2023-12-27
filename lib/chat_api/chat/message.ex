@@ -15,7 +15,7 @@ defmodule ChatApi.Chat.Message do
   schema "messages" do
     field(:content, :string)
 
-    belongs_to(:user, User)
+    belongs_to(:user, User, foreign_key: :recipient_user_id)
     belongs_to(:message_group, MessageGroup)
 
     timestamps()
