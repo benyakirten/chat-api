@@ -1,5 +1,5 @@
 defmodule ChatApi.Chat.Conversation do
-  alias ChatApi.Chat.{Message, Conversation}
+  alias ChatApi.Chat.{Conversation, MessageGroup}
   alias ChatApi.Account.User
 
   use Ecto.Schema
@@ -19,7 +19,6 @@ defmodule ChatApi.Chat.Conversation do
     field(:private, :boolean, default: false)
 
     many_to_many(:users, User, join_through: "users_conversations", on_replace: :delete)
-    has_many(:messages, Message)
 
     timestamps()
   end
@@ -115,7 +114,7 @@ defmodule ChatApi.Chat.Conversation do
 
   @spec user_conversation_with_details_query(binary(), binary(), map() | nil) :: Ecto.Query.t()
   def user_conversation_with_details_query(conversation_id, user_id, opts \\ %{}) do
-    {messages_query, _page_size} = Message.paginate_messages_query(conversation_id, opts)
+    {messages_query, _page_size} = MessageGroup.paginate_messages_query(conversation_id, opts)
 
     from(
       c in Conversation,

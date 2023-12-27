@@ -14,17 +14,16 @@ defmodule ChatApi.Chat.MessageGroup do
   end
 
   @doc false
-  def new(conversation, user, message) do
+  def new(conversation, user) do
     %MessageGroup{}
     |> cast(%{}, [])
     |> put_assoc(:conversation, conversation)
     |> put_assoc(:user, user)
-    |> put_assoc(:message, message)
   end
 
-  @spec paginate_messages_for_user_in_conversation_query(any(), any(), map()) ::
+  @spec paginate_messages_query(any(), any(), map()) ::
           {Ecto.Query.t(), pos_integer()}
-  def paginate_messages_for_user_in_conversation_query(conversation_id, user_id, opts \\ %{}) do
+  def paginate_messages_query(conversation_id, user_id, opts \\ %{}) do
     page_size = Pagination.get_page_size(opts)
 
     # We're usign this as a CTE instead of joins because we want to reuse
@@ -37,7 +36,7 @@ defmodule ChatApi.Chat.MessageGroup do
     query =
       Message
       |> with_cte("message_group", as: ^message_group_cte)
-      |> join(:inner, [m], mg in "message_group", on: m.id == mg.message_id)
+      |> join(:inner, [m], mg in "message_group", on: m.group_id == mg.id)
       |> Pagination.add_seek_pagination(page_size)
       |> Pagination.paginate_from(opts)
 

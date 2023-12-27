@@ -1,5 +1,5 @@
 defmodule ChatApi.Chat.Message do
-  alias ChatApi.Pagination
+  alias ChatApi.Chat.MessageGroup
   alias ChatApi.Chat.Message
   alias ChatApi.Account.User
   use Ecto.Schema
@@ -16,6 +16,7 @@ defmodule ChatApi.Chat.Message do
     field(:content, :string)
 
     belongs_to(:user, User)
+    belongs_to(:message_group, MessageGroup)
 
     timestamps()
   end
@@ -31,16 +32,7 @@ defmodule ChatApi.Chat.Message do
     from(m in Message, where: m.id == ^message_id and m.user_id == ^user_id)
   end
 
-  @spec paginate_messages_query(binary(), map() | nil) :: {Ecto.Query.t(), integer()}
-  def paginate_messages_query(conversation_id, opts \\ %{}) do
-    page_size = Pagination.get_page_size(opts)
-
-    query =
-      from(m in Message)
-      |> where([m], m.conversation_id == ^conversation_id)
-      |> Pagination.add_seek_pagination(page_size)
-      |> Pagination.paginate_from(opts)
-
-    {query, page_size}
+  def message_by_id_query(message_id) do
+    from(m in Message, where: m.id == ^message_id)
   end
 end
