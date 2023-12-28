@@ -238,12 +238,10 @@ defmodule ChatApi.Chat do
 
   defp add_encryption_keys(conversation, user, public_key, private_key) do
     public_key_changeset =
-      %EncryptionKey{}
-      |> EncryptionKey.changeset(conversation, user, Map.put(public_key, "type", "public"))
+      EncryptionKey.new(conversation, user, Map.put(public_key, "type", "public"))
 
     private_key_changeset =
-      %EncryptionKey{}
-      |> EncryptionKey.changeset(
+      EncryptionKey.new(
         conversation,
         user,
         Map.put(private_key, "type", "private")
@@ -342,16 +340,19 @@ defmodule ChatApi.Chat do
 
         {:ok, read_times}
       end)
-      |> Ecto.Multi.run(:get_keys, fn _repo, %{get_conversation: conversation} ->
-        public_key =
-          EncryptionKey.public_key_query(conversation.id, user_id)
-          |> Repo.one()
+      |> Ecto.Multi.run(:get_messages, fn _repo, %{get_conversation: conversation} ->
+        {query, _page_size} =
+          MessageGroup.paginate_messages_query(conversation.id, user_id)
 
+        messages = Repo.all(query)
+        {:ok, messages}
+      end)
+      |> Ecto.Multi.run(:get_private_key, fn _repo, %{get_conversation: conversation} ->
         private_key =
           EncryptionKey.private_key_query(conversation.id, user_id)
           |> Repo.one()
 
-        {:ok, %{public_key: public_key, private_key: private_key}}
+        {:ok, private_key}
       end)
       |> Repo.transaction()
 
@@ -363,15 +364,17 @@ defmodule ChatApi.Chat do
         %{
           get_conversation: conversation,
           get_read_times: read_times,
-          get_keys: %{public_key: public_key, private_key: private_key}
+          get_private_key: private_key,
+          get_messages: messages
         } = results
 
         {:ok,
          %{
            conversation: conversation,
            read_times: read_times,
-           public_key: public_key,
-           private_key: private_key
+           messages: messages,
+           private_key: private_key,
+           public_keys: conversation.encryption_keys
          }}
     end
   end
@@ -465,15 +468,15 @@ defmodule ChatApi.Chat do
         page_token,
         page_size \\ Pagination.default_page_size()
       ) do
-    query =
-      Conversation.user_conversation_with_details_query(conversation_id, user_id, %{
+    {query, _page_size} =
+      MessageGroup.paginate_messages_query(conversation_id, user_id, %{
         "page_size" => page_size,
         "page_token" => page_token
       })
 
     case Repo.one(query) do
       nil -> {:error, :invalid_conversation}
-      conversation -> {:ok, conversation.messages, page_size}
+      messages -> {:ok, messages, page_size}
     end
   end
 

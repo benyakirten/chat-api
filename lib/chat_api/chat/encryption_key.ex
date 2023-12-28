@@ -1,6 +1,5 @@
 defmodule ChatApi.Chat.EncryptionKey do
-  alias ChatApi.Chat.EncryptionKey
-  alias ChatApi.Chat.Conversation
+  alias ChatApi.Chat.{EncryptionKey, Conversation}
   alias ChatApi.Account.User
   use Ecto.Schema
 
@@ -9,7 +8,7 @@ defmodule ChatApi.Chat.EncryptionKey do
 
   @typedoc """
   The JWK encrypted public or private key data.
-  An example of data given might be:
+  An example of private key given might be:
   ```
   %{
   "alg" => "RSA-OAEP-256",
@@ -74,8 +73,8 @@ defmodule ChatApi.Chat.EncryptionKey do
   end
 
   @doc false
-  def changeset(encryption_key, conversation, user, attrs \\ %{}) do
-    encryption_key
+  def new(conversation, user, attrs \\ %{}) do
+    %EncryptionKey{}
     |> cast(attrs, [:alg, :d, :dp, :dq, :e, :ext, :key_ops, :kty, :n, :p, :q, :qi, :type])
     |> validate_required([:alg, :e, :ext, :key_ops, :kty, :n, :type])
     |> put_assoc(:user, user)

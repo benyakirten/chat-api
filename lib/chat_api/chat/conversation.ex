@@ -1,5 +1,5 @@
 defmodule ChatApi.Chat.Conversation do
-  alias ChatApi.Chat.{Conversation, MessageGroup}
+  alias ChatApi.Chat.{Conversation, EncryptionKey, MessageGroup}
   alias ChatApi.Account.User
 
   use Ecto.Schema
@@ -20,6 +20,7 @@ defmodule ChatApi.Chat.Conversation do
 
     many_to_many(:users, User, join_through: "users_conversations", on_replace: :delete)
     has_many(:message_groups, MessageGroup)
+    has_many(:encryption_keys, EncryptionKey)
 
     timestamps()
   end
@@ -113,17 +114,24 @@ defmodule ChatApi.Chat.Conversation do
     )
   end
 
-  @spec user_conversation_with_details_query(binary(), binary(), map() | nil) :: Ecto.Query.t()
-  def user_conversation_with_details_query(conversation_id, user_id, opts \\ %{}) do
-    {messages_query, _page_size} = MessageGroup.paginate_messages_query(conversation_id, opts)
+  @spec user_conversation_with_details_query(binary(), binary()) :: Ecto.Query.t()
+  def user_conversation_with_details_query(conversation_id, user_id) do
+    key_query =
+      from(ek in EncryptionKey,
+        where:
+          ek.conversation_id == ^conversation_id and ek.user_id == ^user_id and
+            ek.type == ^"public",
+        select: ek
+      )
 
     from(
       c in Conversation,
+      select: c,
       join: u in assoc(c, :users),
       where: c.id == ^conversation_id and u.id == ^user_id,
       preload: [
         :users,
-        messages: ^messages_query
+        encryption_keys: ^key_query
       ]
     )
   end

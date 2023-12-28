@@ -4,6 +4,7 @@ defmodule ChatApi.Account.User do
   import Ecto.Query
 
   alias ChatApi.Account.{UserProfile, UserToken, User}
+  alias ChatApi.Chat.{Conversation, EncryptionKey}
   alias ChatApi.Pagination
 
   @type t :: %__MODULE__{
@@ -23,9 +24,10 @@ defmodule ChatApi.Account.User do
     field(:display_name, :string)
 
     has_many(:tokens, UserToken)
+    has_many(:encryption_keys, EncryptionKey)
     has_one(:profile, UserProfile)
 
-    many_to_many(:conversations, ChatApi.Chat.Conversation,
+    many_to_many(:conversations, Conversation,
       join_through: "users_conversations",
       on_replace: :delete
     )

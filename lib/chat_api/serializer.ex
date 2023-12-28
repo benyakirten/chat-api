@@ -70,7 +70,8 @@ defmodule ChatApi.Serializer do
       p: key.p,
       q: key.q,
       qi: key.qi,
-      type: key.type
+      type: key.type,
+      user_id: key.user_id
     }
   end
 
@@ -87,7 +88,8 @@ defmodule ChatApi.Serializer do
       sender: sender_id,
       content: message.content,
       inserted_at: attach_javascript_timezone(message.inserted_at),
-      updated_at: attach_javascript_timezone(message.updated_at)
+      updated_at: attach_javascript_timezone(message.updated_at),
+      message_group: message.message_group_id
     }
   end
 

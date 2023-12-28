@@ -15,16 +15,16 @@ defmodule ChatApiWeb.ConversationChannel do
          %{
            conversation: conversation,
            read_times: read_times,
-           public_key: public_key,
-           private_key: private_key
+           messages: messages,
+           private_key: private_key,
+           public_keys: public_keys
          }} ->
           data = %{
             "conversation" => Serializer.serialize(conversation),
             "users" => Serializer.serialize(conversation.users),
-            "messages" =>
-              Serializer.serialize_all(conversation.messages, Pagination.default_page_size()),
+            "messages" => Serializer.serialize_all(messages, Pagination.default_page_size()),
             "read_times" => read_times,
-            "public_key" => Serializer.serialize(public_key),
+            "public_keys" => Serializer.serialize(public_keys),
             "private_key" => Serializer.serialize(private_key)
           }
 
