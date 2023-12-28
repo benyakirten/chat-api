@@ -167,7 +167,6 @@ defmodule ChatApi.Chat do
     |> Ecto.Multi.run(:add_messages, fn
       _repo,
       %{
-        get_conversation: conversation,
         create_message_group: message_group,
         get_recipients: recipients
       } ->
@@ -179,7 +178,6 @@ defmodule ChatApi.Chat do
               Message.changeset(%Message{}, %{content: content})
               |> Ecto.Changeset.put_assoc(:user, recipient)
               |> Ecto.Changeset.put_assoc(:message_group, message_group)
-              |> Ecto.Changeset.put_assoc(:conversation, conversation)
               |> Ecto.Changeset.put_change(:recipient_user_id, user_id)
               |> Repo.insert()
 

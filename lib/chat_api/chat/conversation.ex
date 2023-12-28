@@ -19,6 +19,7 @@ defmodule ChatApi.Chat.Conversation do
     field(:private, :boolean, default: false)
 
     many_to_many(:users, User, join_through: "users_conversations", on_replace: :delete)
+    has_many(:message_groups, MessageGroup)
 
     timestamps()
   end
