@@ -170,19 +170,24 @@ defmodule ChatApi.Chat do
         create_message_group: message_group,
         get_recipients: recipients
       } ->
+        now = now_to_seconds()
+
         messages =
           Enum.map(encrypted_messages, fn {user_id, content} ->
             recipient = Enum.find(recipients, &(&1.id == user_id))
 
-            {:ok, message} =
-              Message.changeset(%Message{}, %{content: content})
-              |> Ecto.Changeset.put_assoc(:user, recipient)
-              |> Ecto.Changeset.put_assoc(:message_group, message_group)
-              |> Ecto.Changeset.put_change(:recipient_user_id, user_id)
-              |> Repo.insert()
-
-            message
+            %{}
+            |> Map.put(:content, content)
+            |> Map.put(:recipient_user_id, recipient.id)
+            |> Map.put(:message_group_id, message_group.id)
+            |> Map.put(:inserted_at, now)
+            |> Map.put(:updated_at, now)
           end)
+
+        case Repo.insert_all(Message, messages) do
+          {num_inserted, messages} when num_inserted == length(messages) -> {:ok, messages}
+          _ -> {:error, :failed_to_insert_messages}
+        end
 
         {:ok, messages}
     end)
@@ -500,5 +505,9 @@ defmodule ChatApi.Chat do
       end
     )
     |> Repo.transaction()
+  end
+
+  defp now_to_seconds() do
+    NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
   end
 end
