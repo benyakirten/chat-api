@@ -19,12 +19,17 @@ defmodule ChatApiWeb.ConversationChannel do
            private_key: private_key,
            public_keys: public_keys
          }} ->
+          pub_keys =
+            public_keys
+            |> Serializer.serialize()
+            |> Enum.reduce(%{}, fn key, acc -> Map.put(acc, key.user_id, key) end)
+
           data = %{
             "conversation" => Serializer.serialize(conversation),
             "users" => Serializer.serialize(conversation.users),
             "messages" => Serializer.serialize_all(messages, Pagination.default_page_size()),
             "read_times" => read_times,
-            "public_keys" => Serializer.serialize(public_keys),
+            "public_keys" => pub_keys,
             "private_key" => Serializer.serialize(private_key)
           }
 
