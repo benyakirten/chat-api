@@ -76,10 +76,10 @@ defmodule ChatApi.Chat do
         messages =
           Repo.all(MessageGroup.messages_in_message_group_query(message_group_id, sender_id))
 
-        if length(messages) == length(encrypted_messages) do
-          {:ok, messages}
-        else
-          {:error, :not_enough_updated_messages}
+        case length(messages) do
+          size when size == map_size(encrypted_messages) -> {:ok, messages}
+          size when size < map_size(encrypted_messages) -> {:error, :not_enough_updated_messages}
+          _ -> {:error, :too_many_updated_messages}
         end
       end)
       |> Ecto.Multi.run(:update_messages, fn _repo, %{get_messages: messages} ->
