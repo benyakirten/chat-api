@@ -121,9 +121,9 @@ defmodule ChatApi.Chat do
     end
   end
 
-  def send_message(conversation_id, user_id, encrypted_messages) do
+  def send_message(conversation_id, sender_id, encrypted_messages) do
     transaction =
-      send_conversation_message(conversation_id, user_id, encrypted_messages)
+      send_conversation_message(conversation_id, sender_id, encrypted_messages)
       |> Repo.transaction()
 
     case transaction do
@@ -136,14 +136,14 @@ defmodule ChatApi.Chat do
     end
   end
 
-  defp send_conversation_message(conversation_id, user_id, encrypted_messages) do
+  defp send_conversation_message(conversation_id, sender_id, encrypted_messages) do
     Ecto.Multi.new()
     |> return_error_on_no_results(
       :get_conversation,
-      Conversation.member_of_conversation_query(conversation_id, user_id),
+      Conversation.member_of_conversation_query(conversation_id, sender_id),
       :conversation_not_found
     )
-    |> return_error_on_no_results(:get_user, User.user_by_id_query(user_id), :user_not_found)
+    |> return_error_on_no_results(:get_user, User.user_by_id_query(sender_id), :user_not_found)
     # Make sure we have encrypted messages for every user in the conversation
     |> Ecto.Multi.run(:create_message_group, fn
       _repo, %{get_user: user, get_conversation: conversation} ->

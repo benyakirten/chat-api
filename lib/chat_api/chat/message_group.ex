@@ -37,6 +37,7 @@ defmodule ChatApi.Chat.MessageGroup do
       Message
       |> with_cte("message_group", as: ^message_group_cte)
       |> join(:inner, [m], mg in "message_group", on: m.message_group_id == mg.id)
+      |> preload([m], [:message_group])
       |> where([m], m.recipient_user_id == ^user_id)
       |> Pagination.add_seek_pagination(page_size)
       |> Pagination.paginate_from(opts)
