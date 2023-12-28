@@ -456,7 +456,6 @@ defmodule ChatApi.Chat do
     end
   end
 
-  # @spec paginate_more_messages(binary(), binary(), binary(), pos_integer() | nil) ::
   def paginate_more_messages(
         conversation_id,
         user_id,

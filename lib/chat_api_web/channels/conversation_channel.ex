@@ -99,7 +99,7 @@ defmodule ChatApiWeb.ConversationChannel do
         {:ok, messages} ->
           broadcast_messages_to_users(messages, socket.assigns.user_id, "new_message")
 
-          {:reply, {:ok, length(messages)}, socket}
+          {:noreply, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
