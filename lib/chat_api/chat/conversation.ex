@@ -119,7 +119,7 @@ defmodule ChatApi.Chat.Conversation do
     key_query =
       from(ek in EncryptionKey,
         where:
-          ek.conversation_id == ^conversation_id and ek.user_id == ^user_id and
+          ek.conversation_id == ^conversation_id and
             ek.type == ^"public",
         select: ek
       )
