@@ -102,7 +102,12 @@ defmodule ChatApiWeb.ConversationChannel do
           {:reply, {:error, error}, socket}
 
         {:ok, messages} ->
-          broadcast_messages_to_users(messages, socket.assigns.user_id, "new_message")
+          broadcast_messages_to_users(
+            messages,
+            socket.assigns.user_id,
+            socket.assigns.conversation_id,
+            "new_message"
+          )
 
           {:noreply, socket}
       end
@@ -163,7 +168,12 @@ defmodule ChatApiWeb.ConversationChannel do
           {:reply, {:error, error}, socket}
 
         {:ok, messages} ->
-          broadcast_messages_to_users(messages, socket.assigns.user_id, "edit_message")
+          broadcast_messages_to_users(
+            messages,
+            socket.assigns.user_id,
+            socket.assigns.conversation_id,
+            "edit_message"
+          )
 
           {:noreply, socket}
       end
@@ -233,20 +243,23 @@ defmodule ChatApiWeb.ConversationChannel do
     end
   end
 
-  @spec broadcast_messages_to_users([Message.t()], String.t(), String.t()) :: :ok
-  def broadcast_messages_to_users(messages, sender, event) do
+  @spec broadcast_messages_to_users([Message.t()], String.t(), String.t(), String.t()) :: :ok
+  def broadcast_messages_to_users(messages, sender, conversation_id, event) do
     Enum.map(messages, fn message ->
-      broadcast_message_to_user(message, message.recipient_id, sender, event)
+      broadcast_message_to_user(message, message.recipient_id, sender, conversation_id, event)
     end)
 
     :ok
   end
 
-  defp broadcast_message_to_user(message, user_id, sender, event) do
+  defp broadcast_message_to_user(message, user_id, sender, conversation_id, event) do
     ChatApiWeb.Endpoint.broadcast!(
       "user:#{user_id}",
       event,
-      %{"message" => Serializer.serialize(message, sender)}
+      %{
+        "message" => Serializer.serialize(message, sender),
+        "conversation_id" => conversation_id
+      }
     )
   end
 end

@@ -82,7 +82,7 @@ defmodule ChatApi.Serializer do
       content: message.content,
       inserted_at: attach_javascript_timezone(message.inserted_at),
       updated_at: attach_javascript_timezone(message.updated_at),
-      message_group: message.message_group_id
+      message_group: message.message_group.id
     }
   end
 
