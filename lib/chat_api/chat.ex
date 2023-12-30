@@ -89,6 +89,7 @@ defmodule ChatApi.Chat do
 
             {:ok, message} =
               Message.changeset(message, %{content: encrypted_message})
+              |> Repo.preload(:message_group)
               |> Repo.update()
 
             message
@@ -167,29 +168,37 @@ defmodule ChatApi.Chat do
     |> Ecto.Multi.run(:add_messages, fn
       _repo,
       %{
-        create_message_group: message_group,
-        get_recipients: recipients
+        create_message_group: message_group
       } ->
-        now = now_to_seconds()
-
         messages =
-          Enum.map(encrypted_messages, fn {user_id, content} ->
-            recipient = Enum.find(recipients, &(&1.id == user_id))
+          Enum.map(encrypted_messages, fn {recipient_id, content} ->
+            message_insert =
+              %Message{
+                content: content,
+                message_group_id: message_group.id,
+                recipient_user_id: recipient_id
+              }
+              |> Repo.preload(:message_group)
+              |> Repo.insert()
 
-            %{}
-            |> Map.put(:content, content)
-            |> Map.put(:recipient_user_id, recipient.id)
-            |> Map.put(:message_group_id, message_group.id)
-            |> Map.put(:inserted_at, now)
-            |> Map.put(:updated_at, now)
+            case message_insert do
+              {:ok, message_insert} -> message_insert
+              error -> error
+            end
           end)
 
-        case Repo.insert_all(Message, messages) do
-          {num_inserted, messages} when num_inserted == length(messages) -> {:ok, messages}
-          _ -> {:error, :failed_to_insert_messages}
-        end
+        insert_error =
+          Enum.find(messages, fn message ->
+            case message do
+              {:error, _} -> true
+              _ -> false
+            end
+          end)
 
-        {:ok, messages}
+        case insert_error do
+          nil -> {:ok, messages}
+          error -> error
+        end
     end)
   end
 
@@ -508,9 +517,5 @@ defmodule ChatApi.Chat do
       end
     )
     |> Repo.transaction()
-  end
-
-  defp now_to_seconds() do
-    NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
   end
 end

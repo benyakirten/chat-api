@@ -63,7 +63,7 @@ defmodule ChatApiWeb.ConversationChannel do
             "conversation" => Serializer.serialize(conversation)
           })
 
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -81,7 +81,7 @@ defmodule ChatApiWeb.ConversationChannel do
             user_id: socket.assigns.user_id
           })
 
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -104,12 +104,11 @@ defmodule ChatApiWeb.ConversationChannel do
         {:ok, messages} ->
           broadcast_messages_to_users(
             messages,
-            socket.assigns.user_id,
             socket.assigns.conversation_id,
             "new_message"
           )
 
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -122,7 +121,7 @@ defmodule ChatApiWeb.ConversationChannel do
         "user_id" => socket.assigns.user_id
       })
 
-      {:noreply, socket}
+      {:reply, {:ok, :message_sent}, socket}
     else
       {:reply, {:error, :invalid_token}, socket}
     end
@@ -134,7 +133,7 @@ defmodule ChatApiWeb.ConversationChannel do
         "user_id" => socket.assigns.user_id
       })
 
-      {:noreply, socket}
+      {:reply, {:ok, :message_sent}, socket}
     else
       {:reply, {:error, :invalid_token}, socket}
     end
@@ -148,7 +147,7 @@ defmodule ChatApiWeb.ConversationChannel do
 
         :ok ->
           broadcast!(socket, "read_conversation", %{"user_id" => socket.assigns.user_id})
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -170,12 +169,11 @@ defmodule ChatApiWeb.ConversationChannel do
         {:ok, messages} ->
           broadcast_messages_to_users(
             messages,
-            socket.assigns.user_id,
             socket.assigns.conversation_id,
             "edit_message"
           )
 
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -195,7 +193,7 @@ defmodule ChatApiWeb.ConversationChannel do
             "message_group_id" => message_group_id
           })
 
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -211,7 +209,7 @@ defmodule ChatApiWeb.ConversationChannel do
       case Chat.modify_conversation(socket.assigns.conversation_id, new_members, new_alias) do
         {:ok, conversation, user_ids} ->
           SystemChannel.broadcast_new_conversation_to_users(conversation, user_ids)
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
 
         {:error, error} ->
           {:reply, {:error, error}, socket}
@@ -235,7 +233,7 @@ defmodule ChatApiWeb.ConversationChannel do
             "public_key" => public_key
           })
 
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
 
         {:error, error} ->
           {:reply, {:error, error}, socket}
@@ -243,21 +241,25 @@ defmodule ChatApiWeb.ConversationChannel do
     end
   end
 
-  @spec broadcast_messages_to_users([Message.t()], String.t(), String.t(), String.t()) :: :ok
-  def broadcast_messages_to_users(messages, sender, conversation_id, event) do
+  @spec broadcast_messages_to_users([Message.t()], String.t(), String.t()) :: :ok
+  def broadcast_messages_to_users(messages, conversation_id, event) do
     Enum.map(messages, fn message ->
-      broadcast_message_to_user(message, message.recipient_id, sender, conversation_id, event)
+      broadcast_message_to_user(
+        message,
+        conversation_id,
+        event
+      )
     end)
 
     :ok
   end
 
-  defp broadcast_message_to_user(message, user_id, sender, conversation_id, event) do
+  defp broadcast_message_to_user(message, conversation_id, event) do
     ChatApiWeb.Endpoint.broadcast!(
-      "user:#{user_id}",
+      "user:#{message.recipient_user_id}",
       event,
       %{
-        "message" => Serializer.serialize(message, sender),
+        "message" => Serializer.serialize(message),
         "conversation_id" => conversation_id
       }
     )

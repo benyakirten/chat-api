@@ -47,7 +47,7 @@ defmodule ChatApiWeb.SystemChannel do
 
     if UserSocket.authorized?(socket, token) do
       send(self(), :update_hidden_state)
-      {:noreply, assign(socket, :hidden, hidden)}
+      {:reply, {:ok, :message_sent}, assign(socket, :hidden, hidden)}
     else
       {:reply, {:error, :invalid_token}, socket}
     end
@@ -66,7 +66,7 @@ defmodule ChatApiWeb.SystemChannel do
               "display_name" => updated_user.display_name
             })
 
-            {:noreply, socket}
+            {:reply, {:ok, :message_sent}, socket}
 
           {:error, error} ->
             {:reply, {:error, error}, socket}
