@@ -479,16 +479,14 @@ defmodule ChatApi.Chat do
         page_token,
         page_size \\ Pagination.default_page_size()
       ) do
-    {query, _page_size} =
+    {query, page_size} =
       MessageGroup.paginate_messages_query(conversation_id, user_id, %{
         "page_size" => page_size,
         "page_token" => page_token
       })
 
-    case Repo.one(query) do
-      nil -> {:error, :invalid_conversation}
-      messages -> {:ok, messages, page_size}
-    end
+    messages = Repo.all(query)
+    {:ok, messages, page_size}
   end
 
   @spec private_conversation(binary(), binary()) :: nil | Conversation.t()
