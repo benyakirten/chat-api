@@ -89,10 +89,10 @@ defmodule ChatApi.Chat do
 
             {:ok, message} =
               Message.changeset(message, %{content: encrypted_message})
-              |> Repo.preload(:message_group)
               |> Repo.update()
 
             message
+            |> Repo.preload(:message_group)
           end)
 
         {:ok, messages}
@@ -170,6 +170,8 @@ defmodule ChatApi.Chat do
       %{
         create_message_group: message_group
       } ->
+        # I need to think about a better way to do this
+        # I want an early return if any fail to insert
         messages =
           Enum.map(encrypted_messages, fn {recipient_id, content} ->
             message_insert =

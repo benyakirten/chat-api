@@ -1,10 +1,9 @@
 defmodule ChatApi.Chat.Message do
-  alias ChatApi.Chat.MessageGroup
-  alias ChatApi.Chat.Message
-  alias ChatApi.Account.User
   use Ecto.Schema
-  import Ecto.Changeset
-  import Ecto.Query
+  import Ecto.{Changeset, Query}
+
+  alias ChatApi.Chat.{MessageGroup, Message}
+  alias ChatApi.Account.User
 
   @type t :: %__MODULE__{
           content: String.t()
@@ -22,7 +21,7 @@ defmodule ChatApi.Chat.Message do
   end
 
   @doc false
-  def changeset(message, attrs) do
+  def changeset(message, attrs \\ %{}) do
     message
     |> cast(attrs, [:content])
     |> validate_required([:content])
