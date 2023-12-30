@@ -363,12 +363,11 @@ defmodule ChatApi.Account do
     "#{frontend_url}/#{to_string(context)}?token=#{token}"
   end
 
-  @spec send_email_with_hashed_token(UserNotifier.limited_token_type(), User.t()) :: :ok
   defp send_email_with_hashed_token(context, user) do
     {confirm_token, hashed_token} = UserToken.build_hashed_token()
     # TODO: Remove these lines once notifier works correctly
-    IO.inspect(context)
-    IO.inspect(confirm_token)
+    # IO.inspect(context)
+    # IO.inspect(confirm_token)
 
     hashed_token_changeset =
       UserToken.new_changeset_from_token_context(hashed_token, context, user)

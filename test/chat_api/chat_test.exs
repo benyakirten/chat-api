@@ -112,4 +112,56 @@ defmodule ChatApi.ChatTest do
       assert %Ecto.Changeset{} = Chat.change_message(message)
     end
   end
+
+  describe "message_groups" do
+    alias ChatApi.Chat.MessageGroup
+
+    import ChatApi.ChatFixtures
+
+    @invalid_attrs %{}
+
+    test "list_message_groups/0 returns all message_groups" do
+      message_group = message_group_fixture()
+      assert Chat.list_message_groups() == [message_group]
+    end
+
+    test "get_message_group!/1 returns the message_group with given id" do
+      message_group = message_group_fixture()
+      assert Chat.get_message_group!(message_group.id) == message_group
+    end
+
+    test "create_message_group/1 with valid data creates a message_group" do
+      valid_attrs = %{}
+
+      assert {:ok, %MessageGroup{} = message_group} = Chat.create_message_group(valid_attrs)
+    end
+
+    test "create_message_group/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Chat.create_message_group(@invalid_attrs)
+    end
+
+    test "update_message_group/2 with valid data updates the message_group" do
+      message_group = message_group_fixture()
+      update_attrs = %{}
+
+      assert {:ok, %MessageGroup{} = message_group} = Chat.update_message_group(message_group, update_attrs)
+    end
+
+    test "update_message_group/2 with invalid data returns error changeset" do
+      message_group = message_group_fixture()
+      assert {:error, %Ecto.Changeset{}} = Chat.update_message_group(message_group, @invalid_attrs)
+      assert message_group == Chat.get_message_group!(message_group.id)
+    end
+
+    test "delete_message_group/1 deletes the message_group" do
+      message_group = message_group_fixture()
+      assert {:ok, %MessageGroup{}} = Chat.delete_message_group(message_group)
+      assert_raise Ecto.NoResultsError, fn -> Chat.get_message_group!(message_group.id) end
+    end
+
+    test "change_message_group/1 returns a message_group changeset" do
+      message_group = message_group_fixture()
+      assert %Ecto.Changeset{} = Chat.change_message_group(message_group)
+    end
+  end
 end

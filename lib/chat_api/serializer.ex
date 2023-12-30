@@ -1,6 +1,6 @@
 defmodule ChatApi.Serializer do
   alias ChatApi.Pagination
-  alias ChatApi.Chat.{Conversation, Message}
+  alias ChatApi.Chat.{Conversation, Message, EncryptionKey}
   alias ChatApi.Account.{User, UserProfile}
 
   @doc """
@@ -17,6 +17,14 @@ defmodule ChatApi.Serializer do
 
   def serialize([head | tail]) do
     [serialize(head) | serialize(tail)]
+  end
+
+  def serialize([]) do
+    []
+  end
+
+  def serialize(nil) do
+    nil
   end
 
   def serialize(%User{} = user) do
@@ -38,16 +46,6 @@ defmodule ChatApi.Serializer do
     }
   end
 
-  def serialize(%Message{} = message) do
-    %{
-      id: message.id,
-      sender: message.user_id,
-      content: message.content,
-      inserted_at: attach_javascript_timezone(message.inserted_at),
-      updated_at: attach_javascript_timezone(message.updated_at)
-    }
-  end
-
   def serialize(%Conversation{} = conversation) do
     %{
       id: conversation.id,
@@ -58,8 +56,34 @@ defmodule ChatApi.Serializer do
     }
   end
 
-  def serialize([]) do
-    []
+  def serialize(%EncryptionKey{} = key) do
+    %{
+      alg: key.alg,
+      d: key.d,
+      dp: key.dp,
+      dq: key.dq,
+      e: key.e,
+      ext: key.ext,
+      key_ops: key.key_ops,
+      kty: key.kty,
+      n: key.n,
+      p: key.p,
+      q: key.q,
+      qi: key.qi,
+      type: key.type,
+      user_id: key.user_id
+    }
+  end
+
+  def serialize(%Message{} = message) do
+    %{
+      id: message.id,
+      sender: message.message_group.sender_user_id,
+      content: message.content,
+      inserted_at: attach_javascript_timezone(message.inserted_at),
+      updated_at: attach_javascript_timezone(message.updated_at),
+      message_group: message.message_group.id
+    }
   end
 
   def serialize(%User{} = user, %UserProfile{} = profile) do

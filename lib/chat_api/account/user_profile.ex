@@ -39,7 +39,7 @@ defmodule ChatApi.Account.UserProfile do
   end
 
   def changeset_by_user_id(user_id, attrs) do
-    case Repo.one(from p in UserProfile, where: p.user_id == ^user_id) do
+    case Repo.one(from(p in UserProfile, where: p.user_id == ^user_id)) do
       nil -> {:error, :not_found}
       profile -> changeset(profile, attrs)
     end

@@ -1,10 +1,9 @@
 defmodule ChatApi.Chat.Message do
-  alias ChatApi.Pagination
-  alias ChatApi.Chat.{Conversation, Message}
-  alias ChatApi.Account.User
   use Ecto.Schema
-  import Ecto.Changeset
-  import Ecto.Query
+  import Ecto.{Changeset, Query}
+
+  alias ChatApi.Chat.{MessageGroup, Message}
+  alias ChatApi.Account.User
 
   @type t :: %__MODULE__{
           content: String.t()
@@ -13,36 +12,33 @@ defmodule ChatApi.Chat.Message do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "messages" do
-    field :content, :string
+    field(:content, :string)
 
-    belongs_to(:user, User)
-    belongs_to(:conversation, Conversation)
+    belongs_to(:user, User, foreign_key: :recipient_user_id)
+    belongs_to(:message_group, MessageGroup)
 
     timestamps()
   end
 
   @doc false
-  def changeset(message, attrs) do
+  def changeset(message, attrs \\ %{}) do
     message
     |> cast(attrs, [:content])
     |> validate_required([:content])
   end
 
+  @spec message_by_sender_query(binary(), binary()) :: Ecto.Query.t()
   def message_by_sender_query(message_id, user_id) do
     from(m in Message, where: m.id == ^message_id and m.user_id == ^user_id)
   end
 
-  # TODO: Update these map types
-  @spec paginate_messages_query(binary(), map() | nil) :: {Ecto.Query.t(), integer()}
-  def paginate_messages_query(conversation_id, opts \\ %{}) do
-    page_size = Pagination.get_page_size(opts)
+  @spec message_by_id_query(binary()) :: Ecto.Query.t()
+  def message_by_id_query(message_id) do
+    from(m in Message, where: m.id == ^message_id)
+  end
 
-    query =
-      from(m in Message)
-      |> where([m], m.conversation_id == ^conversation_id)
-      |> Pagination.add_seek_pagination(page_size)
-      |> Pagination.paginate_from(opts)
-
-    {query, page_size}
+  @spec messages_by_group_id_query(binary()) :: Ecto.Query.t()
+  def messages_by_group_id_query(message_group_id) do
+    from(m in Message, where: m.message_group_id == ^message_group_id)
   end
 end

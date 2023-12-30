@@ -3,7 +3,7 @@ defmodule ChatApiWeb.ApiController do
   alias ChatApi.{Pagination, Chat}
   use ChatApiWeb, :controller
 
-  action_fallback ChatApiWeb.FallbackController
+  action_fallback(ChatApiWeb.FallbackController)
 
   def get_messages(%Plug.Conn{assigns: %{user_id: user_id}} = conn, _body) do
     page_token = Map.get(conn.query_params, "page_token", "")
@@ -23,5 +23,13 @@ defmodule ChatApiWeb.ApiController do
       ) do
     {users, page_size} = Account.search_users(user_id, query_params)
     render(conn, :paginate_items, %{items: users, page_size: page_size, key: "users"})
+  end
+
+  def check_private_conversation(
+        %Plug.Conn{assigns: %{user_id: user_id}, params: params} = conn,
+        _body
+      ) do
+    conversation = Chat.private_conversation(user_id, params["user_id"])
+    render(conn, :private_conversation, conversation: conversation)
   end
 end

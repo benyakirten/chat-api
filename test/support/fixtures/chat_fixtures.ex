@@ -32,4 +32,18 @@ defmodule ChatApi.ChatFixtures do
 
     message
   end
+
+  @doc """
+  Generate a message_group.
+  """
+  def message_group_fixture(attrs \\ %{}) do
+    {:ok, message_group} =
+      attrs
+      |> Enum.into(%{
+
+      })
+      |> ChatApi.Chat.create_message_group()
+
+    message_group
+  end
 end

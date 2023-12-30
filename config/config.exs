@@ -7,6 +7,7 @@
 # General application configuration
 import Config
 
+# Configure Ecto
 config :chat_api,
   ecto_repos: [ChatApi.Repo]
 

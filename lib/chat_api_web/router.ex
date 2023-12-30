@@ -27,6 +27,7 @@ defmodule ChatApiWeb.Router do
     pipe_through(:api)
     get("/messages", ApiController, :get_messages)
     get("/users", ApiController, :get_users)
+    get("/conversations/private/:user_id", ApiController, :check_private_conversation)
     post("/signout", ProfileController, :signout)
     post("/signout_all", ProfileController, :signout_all)
     post("/token/email_confirm", ProfileController, :request_new_confirmation_token)

@@ -2,9 +2,9 @@ defmodule ChatApiWeb.UserSocket do
   alias ChatApi.Token
   use Phoenix.Socket
 
-  channel "system:*", ChatApiWeb.SystemChannel
-  channel "conversation:*", ChatApiWeb.ConversationChannel
-  channel "user:*", ChatApiWeb.UserChannel
+  channel("system:*", ChatApiWeb.SystemChannel)
+  channel("conversation:*", ChatApiWeb.ConversationChannel)
+  channel("user:*", ChatApiWeb.UserChannel)
 
   @impl true
   def connect(params, socket, _connect_info) do

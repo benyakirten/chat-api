@@ -1,11 +1,8 @@
 defmodule ChatApiWeb.ConversationChannel do
   use ChatApiWeb, :channel
 
-  alias ChatApi.Pagination
-  alias ChatApiWeb.SystemChannel
-  alias ChatApiWeb.UserSocket
-  alias ChatApi.Chat
-  alias ChatApi.Serializer
+  alias ChatApiWeb.{SystemChannel, UserSocket}
+  alias ChatApi.{Chat, Serializer, Pagination}
 
   @impl true
   def join("conversation:" <> conversation_id, payload, socket) do
@@ -14,12 +11,26 @@ defmodule ChatApiWeb.ConversationChannel do
         {:error, reason} ->
           {:error, reason}
 
-        {:ok, conversation, read_times} ->
+        {:ok,
+         %{
+           conversation: conversation,
+           read_times: read_times,
+           messages: messages,
+           private_key: private_key,
+           public_keys: public_keys
+         }} ->
+          pub_keys =
+            public_keys
+            |> Serializer.serialize()
+            |> Enum.reduce(%{}, fn key, acc -> Map.put(acc, key.user_id, key) end)
+
           data = %{
             "conversation" => Serializer.serialize(conversation),
             "users" => Serializer.serialize(conversation.users),
-            "messages" => Serializer.serialize_all(conversation.messages, Pagination.default_page_size()),
-            "read_times" => read_times
+            "messages" => Serializer.serialize_all(messages, Pagination.default_page_size()),
+            "read_times" => read_times,
+            "public_keys" => pub_keys,
+            "private_key" => Serializer.serialize(private_key)
           }
 
           {:ok, data, assign(socket, :conversation_id, conversation_id)}
@@ -27,15 +38,6 @@ defmodule ChatApiWeb.ConversationChannel do
     else
       {:error, :unauthorized}
     end
-  end
-
-  @impl true
-  def terminate({:shutdown, _}, socket) do
-    broadcast!(socket, "finish_typing", %{
-      "user_id" => socket.assigns.user_id
-    })
-
-    :ok
   end
 
   @impl true
@@ -52,7 +54,7 @@ defmodule ChatApiWeb.ConversationChannel do
             "conversation" => Serializer.serialize(conversation)
           })
 
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -70,7 +72,7 @@ defmodule ChatApiWeb.ConversationChannel do
             user_id: socket.assigns.user_id
           })
 
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -79,22 +81,25 @@ defmodule ChatApiWeb.ConversationChannel do
 
   @impl true
   def handle_in("send_message", payload, socket) do
-    %{"token" => token, "content" => content} = payload
+    %{"token" => token, "encrypted_messages" => encrypted_messages} = payload
 
     if UserSocket.authorized?(socket, token) do
-      case Chat.send_message(socket.assigns.conversation_id, socket.assigns.user_id, content) do
+      case Chat.send_message(
+             socket.assigns.conversation_id,
+             socket.assigns.user_id,
+             encrypted_messages
+           ) do
         {:error, error} ->
           {:reply, {:error, error}, socket}
 
-        {:ok, message} ->
-          msg = %{"message" => Serializer.serialize(message)}
-          broadcast!(socket, "new_message", msg)
+        {:ok, messages} ->
+          broadcast_messages_to_users(
+            messages,
+            socket.assigns.conversation_id,
+            "new_message"
+          )
 
-          broadcast!(socket, "finish_typing", %{
-            "user_id" => socket.assigns.user_id
-          })
-
-          {:reply, {:ok, msg}, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -107,7 +112,7 @@ defmodule ChatApiWeb.ConversationChannel do
         "user_id" => socket.assigns.user_id
       })
 
-      {:noreply, socket}
+      {:reply, {:ok, :message_sent}, socket}
     else
       {:reply, {:error, :invalid_token}, socket}
     end
@@ -119,7 +124,7 @@ defmodule ChatApiWeb.ConversationChannel do
         "user_id" => socket.assigns.user_id
       })
 
-      {:noreply, socket}
+      {:reply, {:ok, :message_sent}, socket}
     else
       {:reply, {:error, :invalid_token}, socket}
     end
@@ -133,7 +138,7 @@ defmodule ChatApiWeb.ConversationChannel do
 
         :ok ->
           broadcast!(socket, "read_conversation", %{"user_id" => socket.assigns.user_id})
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -141,19 +146,25 @@ defmodule ChatApiWeb.ConversationChannel do
   end
 
   def handle_in("edit_message", payload, socket) do
-    %{"token" => token, "message_id" => message_id, "content" => content} = payload
+    %{
+      "token" => token,
+      "message_group_id" => message_group_id,
+      "encrypted_messages" => encrypted_messages
+    } = payload
 
     if UserSocket.authorized?(socket, token) do
-      case Chat.update_message(message_id, socket.assigns.user_id, content) do
+      case Chat.update_message(message_group_id, socket.assigns.user_id, encrypted_messages) do
         {:error, error} ->
           {:reply, {:error, error}, socket}
 
-        {:ok, message} ->
-          broadcast!(socket, "update_message", %{
-            "message" => Serializer.serialize(message)
-          })
+        {:ok, messages} ->
+          broadcast_messages_to_users(
+            messages,
+            socket.assigns.conversation_id,
+            "edit_message"
+          )
 
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -161,19 +172,19 @@ defmodule ChatApiWeb.ConversationChannel do
   end
 
   def handle_in("delete_message", payload, socket) do
-    %{"token" => token, "message_id" => message_id} = payload
+    %{"token" => token, "message_group_id" => message_group_id} = payload
 
     if UserSocket.authorized?(socket, token) do
-      case Chat.delete_message(message_id, socket.assigns.user_id) do
+      case Chat.delete_message(message_group_id, socket.assigns.user_id) do
         :error ->
           {:reply, {:error, :delete_failed}, socket}
 
         :ok ->
           broadcast!(socket, "delete_message", %{
-            "message_id" => message_id
+            "message_group_id" => message_group_id
           })
 
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
       end
     else
       {:reply, {:error, :invalid_token}, socket}
@@ -189,11 +200,59 @@ defmodule ChatApiWeb.ConversationChannel do
       case Chat.modify_conversation(socket.assigns.conversation_id, new_members, new_alias) do
         {:ok, conversation, user_ids} ->
           SystemChannel.broadcast_new_conversation_to_users(conversation, user_ids)
-          {:noreply, socket}
+          {:reply, {:ok, :message_sent}, socket}
 
         {:error, error} ->
           {:reply, {:error, error}, socket}
       end
     end
+  end
+
+  def handle_in("set_encryption_keys", payload, socket) do
+    %{"token" => token, "public_key" => public_key, "private_key" => private_key} = payload
+
+    if UserSocket.authorized?(socket, token) do
+      case Chat.set_user_encryption_keys(
+             socket.assigns.conversation_id,
+             socket.assigns.user_id,
+             public_key,
+             private_key
+           ) do
+        {:ok, _} ->
+          broadcast!(socket, "set_encryption_keys", %{
+            "user_id" => socket.assigns.user_id,
+            "public_key" => public_key
+          })
+
+          {:reply, {:ok, :message_sent}, socket}
+
+        {:error, error} ->
+          {:reply, {:error, error}, socket}
+      end
+    end
+  end
+
+  @spec broadcast_messages_to_users([Message.t()], String.t(), String.t()) :: :ok
+  def broadcast_messages_to_users(messages, conversation_id, event) do
+    Enum.map(messages, fn message ->
+      broadcast_message_to_user(
+        message,
+        conversation_id,
+        event
+      )
+    end)
+
+    :ok
+  end
+
+  defp broadcast_message_to_user(message, conversation_id, event) do
+    ChatApiWeb.Endpoint.broadcast!(
+      "user:#{message.recipient_user_id}",
+      event,
+      %{
+        "message" => Serializer.serialize(message),
+        "conversation_id" => conversation_id
+      }
+    )
   end
 end
