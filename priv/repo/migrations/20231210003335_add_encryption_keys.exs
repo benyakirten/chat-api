@@ -1,4 +1,4 @@
-defmodule :"Elixir.ChatApi.Repo.Migrations.Add-encryption-keys" do
+defmodule ChatApi.Repo.Migrations.AddEncryptionKeys do
   use Ecto.Migration
 
   def change do
