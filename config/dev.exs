@@ -69,3 +69,5 @@ config :swoosh, :api_client, false
 config :chat_api, ChatApi.Account, frontend_url: "http://localhost:3000"
 
 config :chat_api, ChatApi.Account.UserNotifier, from_email: "example@example.com"
+
+config :chat_api, ChatApi.Vault, vault_key: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="

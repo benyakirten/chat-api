@@ -18,6 +18,33 @@ To start your Phoenix server:
 - Run `mix setup` to install and setup dependencies.
 - Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
 
+## Environment Variables
+
+Environment variables are not necessary in a development environment. However, the following variables must be defined in a `.env` file for a development environment:
+
+```bash
+FRONTEND_URL
+FROM_EMAIL
+SECRET_KEY_BASE
+VAULT_KEY
+DATABASE_URL
+POOL_SIZE
+```
+
+The variables `FRONTEND_URL` and `FROM_EMAIL` are used to send emails, which is not complete. The `SECRET_KEY_BASE` is used for signing API tokens. The `VAULT_KEY` is used for encryption and decryption of public and private keys. The `DATABASE_URL` is used for connection with the database. The `POOL_SIZE` is used to set the size of database connections in the pool. If absent, the `POOL_SIZE` will default to 10.
+
+All of these environment variables are defined in `.env.example` so a quick way to get a copy is to run:
+
+```bash
+cp .env.example .env
+```
+
+To generate a vault key, you will need to generate 32 bytes and encode them to base 64. An easy way to do this is the following command in iex:
+
+```elixir
+32 |> :crypto.strong_rand_bytes() |> Base.encode64()
+```
+
 ## Data Models
 
 NOTE: This section is incomplete.
