@@ -106,7 +106,7 @@ Payload:
 }
 ```
 
-If successful, the following data will be returned:
+Return payload (if successful):
 
 ```json
 {
@@ -117,14 +117,33 @@ If successful, the following data will be returned:
     "hidden": false,
     "theme": "day", // Options are right now day and night
     "magnification": 1.0, // Value between 0.7 and 1.4
-    "recents": ["/chat/1787a16a-e6a3-4a22-bfdc-0f0ac7253ad5"]
-  }
+    "recents": ["/chat/1787a16a-e6a3-4a22-bfdc-0f0ac7253ad5"] // Array of strings that are to be interpreted as recently viewed pages
+  },
+  "conversations": [
+    {
+      "id": "5161cb32-2d85-4846-897d-10c336ce701c",
+      "private": false,
+      "alias": "Besties 4eva", // Nullable
+      "inserted_at": "2024-01-01T23:38:41.183Z",
+      "updated_at": "2024-01-01T23:38:41.183Z"
+    }
+  ],
+  "users": [
+    // Information for all users in conversations with the user.
+    {
+      "id": "5161cb32-2d85-4846-897d-10c336ce701c",
+      "email": "test@example.com",
+      "display_name": "test@example.com"
+    }
+  ],
+  "auth_token": "SFMyNTY.g2gDbQAAACQ0YjJlMWIwZi03NDBkLTQxMWQtODEzMy1kYzlhYjY2NDBiNWVuBgALsmbHjAFiAAAHCA.fAQMbNHGcPrFJC9KoCNTA03rMgGdXc112Y_shoyRm9g",
+  "refresh_token": "JOebHW8SWnSchOmVwhDJKafyWhCuYRV1CidfR3PwsgQ"
 }
 ```
 
 ### POST `/auth/login`
 
-Log in
+Log in with an email and password to get an auth token and password.
 Payload:
 
 ```json
@@ -134,20 +153,227 @@ Payload:
 }
 ```
 
-<!-- TODO -->
+Returns the same data as the POST `/auth/register` endpoint.
 
-POST `/auth/refresh`
-POST `/auth/confirm`
-POST `/auth/password/request`
-POST `/auth/password/confirm`
-POST `/auth/password/reset`
+### POST `/auth/refresh`
 
-POST `/api/signout_all`
-POST `/api/token/email_confirm`
-POST `/api/token/email_change`
-PATCH `/api/password`
-PATCH `/api/email`
-PATCH `/api/profile`
+Exchange a refresh token for a new auth token and refresh token.
+
+```json
+{
+  "token": "JOebHW8SWnSchOmVwhDJKafyWhCuYRV1CidfR3PwsgQ"
+}
+```
+
+Return the same data (if successful) as `/auth/register`.
+
+### POST `/auth/confirm`
+
+Mark an email address as confirmed. When a user registers (and emailing functionality is complete), an email is sent to their email address to confirm it. No functionality is hidden behind email confirmation.
+
+Payload:
+
+```json
+{
+  "token": "JOebHW8SWnSchOmVwhDJKafyWhCuYRV1CidfR3PwsgQ"
+}
+```
+
+If successful, a 204 with no content will be returned.
+
+### POST `/auth/password/request`
+
+Payload:
+
+```json
+{
+  "email": "test@example.com"
+}
+```
+
+If a user is discovered corresponding to the email, a 204 will be returned and an email will be sent to the email address with a password reset token.
+
+### POST `/auth/password/confirm`
+
+Returns the user that the token belongs to.
+
+Payload:
+
+```json
+{
+  "token": "JOebHW8SWnSchOmVwhDJKafyWhCuYRV1CidfR3PwsgQ"
+}
+```
+
+Return data:
+
+```json
+{
+  "success": true,
+  "user": {
+    "id": "5161cb32-2d85-4846-897d-10c336ce701c",
+    "email": "test@example.com",
+    "display_name": "test@example.com"
+  }
+}
+```
+
+### POST `/auth/password/reset`
+
+A password reset token will set the password to a new value and revoke all tokens (refresh, confirmation etc.).
+
+Payload:
+
+```json
+{
+  "token": "JOebHW8SWnSchOmVwhDJKafyWhCuYRV1CidfR3PwsgQ",
+  "password": "VerySecurePassword1!", // Current password
+  "new_password": "VerySecurePassword2!", // New Password
+  "new_password_confirmation": "VerySecurePassword2!" // Must match the new password exactly
+}
+```
+
+Returns a 204 if successful.
+
+## API Endpoints
+
+All API endpoints require a `Authorization` header with a value of `Bearer <token>`. A token will only be valid for 30 minutes and identifies the user in the payload.
+
+### POST `/api/signout_all`
+
+Forces all refresh tokens for a given user to be revoked. No payload is required. A 204 response with no data will be returned.
+
+### POST `/api/token/email_confirm`
+
+Requests a new email confirmation token. No payload is required. A 204 response with no data will be returned.
+
+### POST `/api/token/email_change`
+
+Requests a new email change token. No payload is required. A 204 response with no data will be returned.
+
+### PATCH `/api/password`
+
+Changes a user's password. This is different from POST `/auth/password/reset` because it uses a token.
+
+Payload:
+
+```json
+{
+  "password": "VerySecurePassword1!", // Current password
+  "new_password": "VerySecurePassword2!", // New Password
+  "new_password_confirmation": "VerySecurePassword2!" // Must match the new password exactly
+}
+```
+
+If the request is successful then a 204 will be returned and all tokens will be reset for the user.
+
+### PATCH `/api/email`
+
+Change a user's email. It requires both the email change token and the authentication token, meaning it can only happen if the user is logged in.
+
+Payload:
+
+```json
+{
+  "token": "JOebHW8SWnSchOmVwhDJKafyWhCuYRV1CidfR3PwsgQ",
+  "email": "test@example.com",
+  "password": "VerySecurePassword1!"
+}
+```
+
+If successful, a 204 with no data will be returned.
+
+### PATCH `/api/profile`
+
+Changes the user profile settings including:
+
+1. Text Magnification
+2. Theme
+3. Recents
+4. Hidden status
+
+Payload:
+
+```json
+{
+  "hidden": false,
+  "theme": "day", // Options are right now day and night
+  "magnification": 1.0, // Value between 0.7 and 1.4
+  "recents": ["/chat/1787a16a-e6a3-4a22-bfdc-0f0ac7253ad5"] // Array of strings that are to be interpreted as recently viewed pages
+}
+```
+
+Returned data if successful:
+
+```json
+{
+  "hidden": false,
+  "theme": "day", // Options are right now day and night
+  "magnification": 1.0, // Value between 0.7 and 1.4
+  "recents": ["/chat/1787a16a-e6a3-4a22-bfdc-0f0ac7253ad5"] // Array of strings that are to be interpreted as recently viewed pages
+}
+```
+
+### GET `/api/messages`
+
+Get paginated messages for a conversation. It takes the following required query parameters:
+
+1. `conversation_id` - the UUID of the conversation
+
+Optional query parameters:
+
+1. `page_token` - the page token from the last page retrieved. If no page token is given then the messages will be paginated from the latest messages for the conversation.
+2. `page_size` - the amount of messages to retrieve.
+
+The returned data if successful is:
+
+```json
+{
+  "items": [
+    {
+      "id": "5161cb32-2d85-4846-897d-10c336ce701c",
+      "sender": "5161cb32-2d85-4846-897d-10c336ce701c",
+      "content": "Hello", // This will be encrypted using the public key for the user for the conversation
+      "inserted_at": "2024-01-01T23:38:41.183Z",
+      "updated_at": "2024-01-01T23:38:41.183Z",
+      "message_group": "5161cb32-2d85-4846-897d-10c336ce701c" // Message group ID is needed when updating/deleting the message
+    }
+  ],
+  "page_token": "JOebHW8SWnSchOmVwhDJKafyWhCuYRV1CidfR3PwsgQ" // Null if there are no more messages for the conversation
+}
+```
+
+### GET `/api/users`
+
+Get a page of users. It takes two optional query parameters:
+
+1. `page_token` - the page token from the last page retrieved. If no page token is given then the messages will be paginated from the latest messages for the conversation.
+2. `page_size` - the amount of messages to retrieve.
+
+The returned data if successful is:
+
+```json
+{
+  "items": [
+    {
+      "id": "5161cb32-2d85-4846-897d-10c336ce701c",
+      "email": "test@example.com",
+      "display_name": "test@example.com"
+    }
+  ],
+  "page_token": "JOebHW8SWnSchOmVwhDJKafyWhCuYRV1CidfR3PwsgQ" // Null if there are no more messages for the conversation
+}
+```
+
+### GET `/api/conversations/private/:user_id`
+
+Returns if the user by the auth token is already in a private conversation with the user by the given user ID. No query parameters will be checked. Returns the following data:
+
+```json
+{
+  "conversation_id": "5161cb32-2d85-4846-897d-10c336ce701c" // Null if no conversation is found
+}
+```
 
 ## Socket Interactions
 
@@ -158,10 +384,13 @@ The socket interfaces are divided into three channels (a Phoenix abstraction ove
 `user:{uuid}`
 `conversation:{uuid}`
 
+A conversation channel will be opened per channel that the user is
+
 The exact parameters of these endpoints and how to use them will be explained later.
 
 ## What's Missing
 
 1. Testing and Documentation
-2. Fix the email system (emails are not sent so confirmation/changing email and resetting password is not available)
-3. Streamline functions/modules, remove redundancies and make sure domain code is entirely contained within it
+1. Fix the email system (emails are not sent so confirmation/changing email and resetting password is not available)
+1. Streamline functions/modules, remove redundancies and make sure domain code is entirely contained within it
+1. Add OAPI docs for endpoints/socket interactions.
