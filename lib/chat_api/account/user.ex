@@ -167,6 +167,7 @@ defmodule ChatApi.Account.User do
     |> validate_length(:display_name, min: 3, max: 20)
   end
 
+  @spec multiple_users_by_id_query([binary()]) :: Ecto.Query.t()
   def multiple_users_by_id_query(user_ids) do
     from(u in User, where: u.id in ^user_ids)
   end
