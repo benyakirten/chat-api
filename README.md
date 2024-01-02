@@ -377,16 +377,340 @@ Returns if the user by the auth token is already in a private conversation with 
 
 ## Socket Interactions
 
-<!-- TODO -->
-
 The socket interfaces are divided into three channels (a Phoenix abstraction over sockets):
 `system:general`
 `user:{uuid}`
 `conversation:{uuid}`
 
-A conversation channel will be opened per channel that the user is
+A conversation channel will be opened per converstion that the user is involved in, while the user will only be connected to one `user` channel for their ID and one connection to the system general channel. All token interactions must include the auth token in the payload under the `token` key, e.g.
 
-The exact parameters of these endpoints and how to use them will be explained later.
+```json
+{
+  "token": "SFMyNTY.g2gDbQAAACQ0YjJlMWIwZi03NDBkLTQxMWQtODEzMy1kYzlhYjY2NDBiNWVuBgALsmbHjAFiAAAHCA.fAQMbNHGcPrFJC9KoCNTA03rMgGdXc112Y_shoyRm9g"
+}
+```
+
+### System Channel
+
+The `system:general` receives messages from users which isn't targeted towards a specific conversation. There are two main functions:
+
+1. Tracking user presence (logged-in status). It decides the three possibilities: 1. Logged in, 2. Not Logged in, 3. Logged in but hidden.
+1. Changing the user's display name/hidden status.
+1. Starting a conversation.
+
+The following events are received:
+
+#### set_hidden
+
+Set the hidden status of the user. If a user is hidden, they will not be displayed as online even if they are logged in.
+
+Payload:
+
+```json
+{
+  "hidden": true // Boolean that represents the hidden status
+}
+```
+
+Event receive the `"message_sent"` payload in the reply. The status of the user will be changed in the presence.
+
+#### set_display_name
+
+Set the display name for the user.
+
+Payload:
+
+```json
+{
+  "display_name": "New Display Name"
+}
+```
+
+If successful, the following data will be transmitted on the `system:general` channel to all users.
+
+```json
+{
+  "user_id": "5161cb32-2d85-4846-897d-10c336ce701c",
+  "display_name": "New Dislay Name"
+}
+```
+
+#### start_group_conversation
+
+Begin a group conversation.
+
+Payload:
+
+```json
+{
+  "user_ids": ["5161cb32-2d85-4846-897d-10c336ce701c"],
+  "public_key": {}, // Specifications for a public and private key can be found in the add encryption keys migration
+  "private_key": {},
+  "alias": "Besties 4eva" // Optional
+}
+```
+
+If successful, it will send transmission on each relevant user's `user:<uuid>` channel with the following data:
+
+```json
+{
+  "conversation": {
+    "id": "5161cb32-2d85-4846-897d-10c336ce701c",
+    "private": false,
+    "alias": "Besties 4eva", // Nullable
+    "inserted_at": "2024-01-01T23:38:41.183Z",
+    "updated_at": "2024-01-01T23:38:41.183Z"
+  },
+  "user_ids": ["5161cb32-2d85-4846-897d-10c336ce701c"] // The IDs of all users in the conversation
+}
+```
+
+#### start_private_conversation
+
+Begin a private conversation. A private conversation cannot have an alias, and the `private` field will have a value of `true`.
+
+Payload:
+
+```json
+{
+  "other_user_id": "5161cb32-2d85-4846-897d-10c336ce701c",
+  "public_key": {},
+  "private_key": {}
+}
+```
+
+If successful, the handling is identical to `start_private_conversation`.
+
+### User Channel
+
+The user channel is to send a message from the server to a specific user with some information that is relevant to them. There is no messages to be transmitted to the server. There are four events that will be transmitted on this channel.
+
+#### new_conversation
+
+A new conversation (either private or group) will be transmitted when a new conversation has started and the user is in that conversation.
+
+Payload:
+
+```json
+{
+  "conversation": {
+    "id": "5161cb32-2d85-4846-897d-10c336ce701c",
+    "private": false,
+    "alias": "Besties 4eva", // Nullable
+    "inserted_at": "2024-01-01T23:38:41.183Z",
+    "updated_at": "2024-01-01T23:38:41.183Z"
+  },
+  "user_ids": ["5161cb32-2d85-4846-897d-10c336ce701c"] // The IDs of all users in the conversation
+}
+```
+
+#### new_message
+
+A conversation has a message sent in it. The reason that this is not transmitted on the conversation's channel is because each message is actually a series of messages encrypted with the public keys of every user in the channel (including the sender). Each user only receives the messages encrypted with their public key for the conversation.
+
+Payload:
+
+```json
+{
+  "conversation_id": "5161cb32-2d85-4846-897d-10c336ce701c",
+  "message": {
+    "id": "5161cb32-2d85-4846-897d-10c336ce701c",
+    "sender": "5161cb32-2d85-4846-897d-10c336ce701c",
+    "content": "Hello", // This will be encrypted using the public key for the user for the conversation
+    "inserted_at": "2024-01-01T23:38:41.183Z",
+    "updated_at": "2024-01-01T23:38:41.183Z",
+    "message_group": "5161cb32-2d85-4846-897d-10c336ce701c" // Message group ID is needed when updating/deleting the message
+  }
+}
+```
+
+#### edit_message
+
+When a message is edited, a new message encrypted with every public key will be transmitted. The procedure is identical to `new_message` above.
+
+### Conversation Channel
+
+The conversation channel sends and receives events. It handles interactions a user can do with a channel: 1. Leaving it, 2. Sending/Editing/Deleting messages, 3. Changing the conversation (alias and/or users in the conversation), 4. Start/finish typing, 5. If a user has read the conversation, and 6. Transmitting/receiving public keys.
+
+Upon joining a conversation, the following will be transmitted to a user:
+
+```json
+{
+  "conversation": {
+    "id": "5161cb32-2d85-4846-897d-10c336ce701c",
+    "private": false,
+    "alias": "Besties 4eva", // Nullable
+    "inserted_at": "2024-01-01T23:38:41.183Z",
+    "updated_at": "2024-01-01T23:38:41.183Z"
+  },
+  "read_times": {
+    // Read times are an object of the users' IDs to their latest read times
+    "5161cb32-2d85-4846-897d-10c336ce701c": "2024-01-01T23:38:41.183Z"
+  },
+  "messages": {
+
+    "items": [
+      {
+        "id": "5161cb32-2d85-4846-897d-10c336ce701c",
+        "sender": "5161cb32-2d85-4846-897d-10c336ce701c",
+        "content": "Hello", // This will be encrypted using the public key for the user for the conversation
+        "inserted_at": "2024-01-01T23:38:41.183Z",
+        "updated_at": "2024-01-01T23:38:41.183Z",
+        "message_group": "5161cb32-2d85-4846-897d-10c336ce701c" // Message group ID is needed when updating/deleting the message
+      }
+    ],
+    "JOebHW8SWnSchOmVwhDJKafyWhCuYRV1CidfR3PwsgQ" // Null if there are no more messages for the conversation
+  },
+  "public_keys": { // Object with the keys beign the user IDs and the values being the corresponding public keys
+      "5161cb32-2d85-4846-897d-10c336ce701c": {}
+  },
+  "private_key": {}
+}
+```
+
+#### change_alias
+
+Set the alias for the conversation.
+
+Payload:
+
+```json
+{
+  "alias": "Besties 4eva"
+}
+```
+
+If successful, the `update_alias` event will be transmitted to all participants in the conversation with the new conversation alias.
+
+#### leave_conversation
+
+A user has left a group conversation. There is no associated payload. If successful, the `leave_conversation` event will be transmitted to all participants in the conversation with the following data:
+
+```json
+{
+  "user_id": "5161cb32-2d85-4846-897d-10c336ce701c"
+}
+```
+
+#### send_message
+
+The user is transmitting a set of messages encrypted with the public key of each user.
+
+Payload:
+
+```json
+{
+  "encrypted_messages": {
+    "5161cb32-2d85-4846-897d-10c336ce701c": "hello" // Keys of this object are the user ids of each user, and the values are the messages encrypted in the users' public keys
+  }
+}
+```
+
+This will trigger the `new_message` event in the `user:<uuid>` channel as described above.
+
+#### edit_message
+
+The user is transmitting an update for a message group. Only the original sender for a message can edit it.
+
+Payload:
+
+```json
+{
+  "message_group_id": "5161cb32-2d85-4846-897d-10c336ce701c",
+  "encrypted_messages": {
+    "5161cb32-2d85-4846-897d-10c336ce701c": "hello" // Keys of this object are the user ids of each user, and the values are the messages encrypted in the users' public keys
+  }
+}
+```
+
+Like the `send_message` event above, the `edit_message` event will be sent in the `user:<uuid>` channel as described above.
+
+#### delete_message
+
+The sender of messages wish to delete all messages in a message group.
+
+Payload:
+
+```json
+{
+  "message_group_id": "5161cb32-2d85-4846-897d-10c336ce701c"
+}
+```
+
+If successful, the `delete_message` event will be triggered in the channel with the following data:
+
+```json
+{
+  "message_group_id": "5161cb32-2d85-4846-897d-10c336ce701c"
+}
+```
+
+#### start_typing
+
+The user has begun typing. There is no payload. If successful, the `start_typing` event will be transmitted to all participants in the conversation with the following data:
+
+```json
+{
+  "user_id": "5161cb32-2d85-4846-897d-10c336ce701c"
+}
+```
+
+#### finish_typing
+
+The user has finished typing. There is no payload. If successful, the `finish_typing` event will be transmitted to all participants in the conversation with the following data:
+
+```json
+{
+  "user_id": "5161cb32-2d85-4846-897d-10c336ce701c"
+}
+```
+
+#### read_conversation
+
+The user has read the conversation so far. This is used to indicate which users have seen which messages. There is no payload associated with the event, and the `read_conversation` event will be transmitted to all participants in the conversation with the following data:
+
+```json
+{
+  "user_id": "5161cb32-2d85-4846-897d-10c336ce701c"
+}
+```
+
+#### modify_conversation
+
+A group conversation has new members added to it and optionally the alias may have changed.
+
+Payload:
+
+```json
+{
+  "new_members": ["5161cb32-2d85-4846-897d-10c336ce701c"],
+  "alias": "Besties 4eva" // Optional
+}
+```
+
+If successful, an identical payload to a new conversation is sent to all users in the conversation. For all users already in the conversation, the ID will already be existent and details will overwrite previous details.
+
+#### set_encryption_keys
+
+Since encryption keys are generated on the client side, each user in a conversation must transmit a public and private key upon joining a conversation for the first time.
+
+Payload:
+
+```json
+{
+  "public_key": {},
+  "private_key": {}
+}
+```
+
+If successful, the `set_encryption_keys` event will be transmitted to all users in the channel with the following data:
+
+```json
+{
+  "user_id": "5161cb32-2d85-4846-897d-10c336ce701c",
+  "public_key": {}
+}
+```
 
 ## What's Missing
 

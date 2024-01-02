@@ -106,45 +106,6 @@ defmodule ChatApiWeb.ConversationChannel do
     end
   end
 
-  def handle_in("start_typing", payload, socket) do
-    if UserSocket.authorized?(socket, payload["token"]) do
-      broadcast!(socket, "start_typing", %{
-        "user_id" => socket.assigns.user_id
-      })
-
-      {:reply, {:ok, :message_sent}, socket}
-    else
-      {:reply, {:error, :invalid_token}, socket}
-    end
-  end
-
-  def handle_in("finish_typing", payload, socket) do
-    if UserSocket.authorized?(socket, payload["token"]) do
-      broadcast!(socket, "finish_typing", %{
-        "user_id" => socket.assigns.user_id
-      })
-
-      {:reply, {:ok, :message_sent}, socket}
-    else
-      {:reply, {:error, :invalid_token}, socket}
-    end
-  end
-
-  def handle_in("read_conversation", payload, socket) do
-    if UserSocket.authorized?(socket, payload["token"]) do
-      case Chat.update_read_time(socket.assigns.conversation_id, socket.assigns.user_id) do
-        :error ->
-          {:reply, {:error, :read_update_failed}, socket}
-
-        :ok ->
-          broadcast!(socket, "read_conversation", %{"user_id" => socket.assigns.user_id})
-          {:reply, {:ok, :message_sent}, socket}
-      end
-    else
-      {:reply, {:error, :invalid_token}, socket}
-    end
-  end
-
   def handle_in("edit_message", payload, socket) do
     %{
       "token" => token,
@@ -191,8 +152,48 @@ defmodule ChatApiWeb.ConversationChannel do
     end
   end
 
+  def handle_in("start_typing", payload, socket) do
+    if UserSocket.authorized?(socket, payload["token"]) do
+      broadcast!(socket, "start_typing", %{
+        "user_id" => socket.assigns.user_id
+      })
+
+      {:reply, {:ok, :message_sent}, socket}
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
+  end
+
+  def handle_in("finish_typing", payload, socket) do
+    if UserSocket.authorized?(socket, payload["token"]) do
+      broadcast!(socket, "finish_typing", %{
+        "user_id" => socket.assigns.user_id
+      })
+
+      {:reply, {:ok, :message_sent}, socket}
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
+  end
+
+  def handle_in("read_conversation", payload, socket) do
+    if UserSocket.authorized?(socket, payload["token"]) do
+      case Chat.update_read_time(socket.assigns.conversation_id, socket.assigns.user_id) do
+        :error ->
+          {:reply, {:error, :read_update_failed}, socket}
+
+        :ok ->
+          broadcast!(socket, "read_conversation", %{"user_id" => socket.assigns.user_id})
+          {:reply, {:ok, :message_sent}, socket}
+      end
+    else
+      {:reply, {:error, :invalid_token}, socket}
+    end
+  end
+
   def handle_in("modify_conversation", payload, socket) do
-    %{"token" => token, "new_members" => new_members, "alias" => new_alias} = payload
+    %{"token" => token, "new_members" => new_members} = payload
+    new_alias = Map.get(payload, "new_alias")
 
     if UserSocket.authorized?(socket, token) do
       new_alias = if new_alias == "", do: nil, else: new_alias
