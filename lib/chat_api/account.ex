@@ -379,6 +379,7 @@ defmodule ChatApi.Account do
     :ok
   end
 
+  @spec set_user_profile_recents(any(), any()) :: {:error, any()} | {:ok, any()}
   def set_user_profile_recents(user_id, recents) do
     transaction =
       Ecto.Multi.new()
