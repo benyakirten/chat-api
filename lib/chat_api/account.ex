@@ -374,8 +374,8 @@ defmodule ChatApi.Account do
 
     Repo.insert(hashed_token_changeset)
 
-    url = form_url(context, confirm_token)
-    UserNotifier.deliver_email(context, user, url)
+    # url = form_url(context, confirm_token)
+    # UserNotifier.deliver_email(context, user, url)
     :ok
   end
 
