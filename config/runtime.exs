@@ -21,8 +21,6 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
-  DotenvParser.load_file(".env")
-
   config :chat_api, ChatApi.Account, frontend_url: System.fetch_env!("FRONTEND_URL")
 
   config :chat_api, ChatApi.Account.UserNotifier, from_email: System.fetch_env!("FROM_EMAIL")
