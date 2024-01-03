@@ -17,6 +17,7 @@ config :chat_api, ChatApi.Repo,
 
 # Configures the endpoint
 config :chat_api, ChatApiWeb.Endpoint,
+  check_origin: false,
   url: [host: "localhost"],
   render_errors: [
     formats: [json: ChatApiWeb.ErrorJSON],
